@@ -312,6 +312,66 @@ fun MainMenuScreen(viewModel: DurakViewModel, statsList: List<GameStat>) {
                     )
                 }
             }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Bottom footer containing Version on the left, and Changelog button on the right
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 4.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "0.0.1_01",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f)
+                )
+
+                var showChangelogDialog by remember { mutableStateOf(false) }
+
+                Text(
+                    text = viewModel.getString("CHANGELOG_BTN"),
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier
+                        .clickable { showChangelogDialog = true }
+                        .padding(8.dp)
+                )
+
+                if (showChangelogDialog) {
+                    AlertDialog(
+                        onDismissRequest = { showChangelogDialog = false },
+                        title = {
+                            Text(
+                                text = viewModel.getString("CHANGELOG_TITLE"),
+                                fontWeight = FontWeight.Bold
+                            )
+                        },
+                        text = {
+                            Text(
+                                text = viewModel.getString("CHANGELOG_TEXT"),
+                                fontSize = 14.sp,
+                                lineHeight = 20.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        },
+                        confirmButton = {
+                            TextButton(onClick = { showChangelogDialog = false }) {
+                                Text(
+                                    text = if (viewModel.appLanguage.value == AppLanguage.RU) "Закрыть" else "Close",
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        },
+                        shape = RoundedCornerShape(28.dp),
+                        containerColor = MaterialTheme.colorScheme.surface
+                    )
+                }
+            }
         }
     }
 }
@@ -514,7 +574,7 @@ fun MultiplayerHubScreen(viewModel: DurakViewModel) {
         // CENTER: Mode Selector (Host vs Join)
         Column(
             modifier = Modifier
-                .fillLogLevel()
+                .fillMaxWidth()
                 .weight(1f)
                 .padding(vertical = 16.dp)
         ) {
@@ -595,6 +655,106 @@ fun MultiplayerHubScreen(viewModel: DurakViewModel) {
                             fontSize = 12.sp,
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                         )
+
+                        Spacer(modifier = Modifier.height(20.dp))
+
+                        // ADVANCED CREATION OPTIONS (Only selectable if we haven't started hosting yet!)
+                        val selectedDeckSize by viewModel.mpLobbyDeckSize.collectAsStateWithLifecycle()
+                        val selectedPlayersCount by viewModel.mpLobbyPlayersCount.collectAsStateWithLifecycle()
+
+                        Text(
+                            text = if (appLanguage == AppLanguage.RU) "Размер колоды" else "Deck Size",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                            modifier = Modifier.align(Alignment.Start)
+                        )
+
+                        Spacer(modifier = Modifier.height(6.dp))
+
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                                .padding(4.dp)
+                        ) {
+                            val optionDeck36Enabled = networkState != MultiplayerManager.State.HOSTING
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(if (selectedDeckSize == 36) MaterialTheme.colorScheme.primary else Color.Transparent)
+                                    .clickable(enabled = optionDeck36Enabled) { viewModel.setMpLobbyDeckSize(36) }
+                                    .padding(vertical = 10.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "36 (6 - A)",
+                                    color = if (selectedDeckSize == 36) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 12.sp
+                                )
+                            }
+
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(if (selectedDeckSize == 52) MaterialTheme.colorScheme.primary else Color.Transparent)
+                                    .clickable(enabled = optionDeck36Enabled) { viewModel.setMpLobbyDeckSize(52) }
+                                    .padding(vertical = 10.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "52 (2 - A)",
+                                    color = if (selectedDeckSize == 52) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 12.sp
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        Text(
+                            text = if (appLanguage == AppLanguage.RU) "Количество игроков" else "Max Players",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                            modifier = Modifier.align(Alignment.Start)
+                        )
+
+                        Spacer(modifier = Modifier.height(6.dp))
+
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                                .padding(4.dp),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            val optionPlayersEnabled = networkState != MultiplayerManager.State.HOSTING
+                            for (pCount in 2..6) {
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(if (selectedPlayersCount == pCount) MaterialTheme.colorScheme.secondary else Color.Transparent)
+                                        .clickable(enabled = optionPlayersEnabled) { viewModel.setMpLobbyPlayersCount(pCount) }
+                                        .padding(vertical = 10.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = pCount.toString(),
+                                        color = if (selectedPlayersCount == pCount) MaterialTheme.colorScheme.onSecondary else MaterialTheme.colorScheme.onSurface,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 13.sp
+                                    )
+                                }
+                            }
+                        }
 
                         Spacer(modifier = Modifier.height(24.dp))
 

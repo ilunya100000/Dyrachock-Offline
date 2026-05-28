@@ -8,6 +8,10 @@ enum class Suit(val symbol: String, val colorRed: Boolean, val ruLabel: String, 
 }
 
 enum class Rank(val value: Int, val symbol: String) {
+    TWO(2, "2"),
+    THREE(3, "3"),
+    FOUR(4, "4"),
+    FIVE(5, "5"),
     SIX(6, "6"),
     SEVEN(7, "7"),
     EIGHT(8, "8"),

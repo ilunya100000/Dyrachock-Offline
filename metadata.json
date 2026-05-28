@@ -1,5 +1,5 @@
 {
-  "name": "Durak",
+  "name": "Dyrachok Offline",
   "description": "Classic Russian Card Game with Offline AI Bot and peer-to-peer Local Multiplayer over Wi-Fi.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]

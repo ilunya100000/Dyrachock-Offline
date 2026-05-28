@@ -33,7 +33,7 @@ class DurakEngine {
     }
 
     // Start a new match
-    fun startMatch(player1Name: String, player2Name: String, isBotGame: Boolean) {
+    fun startMatch(player1Name: String, player2Name: String, isBotGame: Boolean, deckSize: Int = 36) {
         deck.clear()
         tablePairs.clear()
         playerHand.clear()
@@ -41,15 +41,19 @@ class DurakEngine {
         gameLog.clear()
         discardPileSize = 0
 
-        // Create 36 card deck (ranks 6 to Ace)
+        // Create deck of specified size
         for (suit in Suit.values()) {
             for (rank in Rank.values()) {
-                deck.add(Card(suit, rank))
+                if (deckSize == 52 || rank.value >= 6) {
+                    deck.add(Card(suit, rank))
+                }
             }
         }
 
-        // Shuffle deck
-        deck.shuffle(random)
+        // Shuffle deck 7 times thoroughly to prevent single-suit patterns and clustering
+        repeat(7) {
+            deck.shuffle(random)
+        }
 
         // Deal 6 cards
         dealCards()

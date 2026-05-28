@@ -71,6 +71,21 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
     private val _botThinking = MutableStateFlow(false)
     val botThinking = _botThinking.asStateFlow()
 
+    // MP Lobby Custom Configuration
+    private val _mpLobbyDeckSize = MutableStateFlow(36)
+    val mpLobbyDeckSize = _mpLobbyDeckSize.asStateFlow()
+
+    private val _mpLobbyPlayersCount = MutableStateFlow(2)
+    val mpLobbyPlayersCount = _mpLobbyPlayersCount.asStateFlow()
+
+    fun setMpLobbyDeckSize(size: Int) {
+        _mpLobbyDeckSize.value = size
+    }
+
+    fun setMpLobbyPlayersCount(count: Int) {
+        _mpLobbyPlayersCount.value = count
+    }
+
     init {
         // Monitor socket incoming network actions
         viewModelScope.launch {
@@ -97,14 +112,14 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
 
     // Dynamic runtime translation maps
     private val enTranslations = mapOf(
-        "APP_TITLE" to "DURAK",
+        "APP_TITLE" to "Dyrachok Offline",
         "PLAY_OFFLINE" to "Play Offline",
         "PLAY_ONLINE" to "Local Multiplayer",
         "BOT_SETUP_TITLE" to "Offline Match",
         "DIFFICULTY" to "Bot Difficulty",
         "EASY" to "Easy (Random)",
         "HARD" to "Hard (Analytical)",
-        "START_GAME" to "Start Durak",
+        "START_GAME" to "Start Game",
         "P2P_TITLE" to "Local Online",
         "NSD_STATUS" to "Wi-Fi Hub Discovery",
         "HOST_LOBBY" to "Host a Lobby",
@@ -135,11 +150,14 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
         "LOST_TITLE" to "DEFEAT! YOU ARE THE DURAK!",
         "DRAW_TITLE" to "DRAW GAME!",
         "DISC_TITLE" to "Opponent disconnected!",
-        "STATUS_TITLE_LABEL" to "Durak Classic"
+        "STATUS_TITLE_LABEL" to "Dyrachok Offline",
+        "CHANGELOG_BTN" to "Changelog",
+        "CHANGELOG_TITLE" to "Version Changelog",
+        "CHANGELOG_TEXT" to "Version 0.0.1_01\n\n• Renamed the game to Dyrachok Offline!\n• Fixed Local Bot behavior to make moves instantly and correctly.\n• Improved card blending/shuffling algorithms (7x mixing) to prevent single-suit streaks.\n• Added Advanced Multiplayer Lobby customization with custom deck sizes (36 vs 52 cards) and player limit options (2 to 6 players).\n• Beautiful Material 3 Clean Minimalism visual appearance."
     )
 
     private val ruTranslations = mapOf(
-        "APP_TITLE" to "ДУРАК",
+        "APP_TITLE" to "Дурачок Оффлайн",
         "PLAY_OFFLINE" to "Офлайн Игра",
         "PLAY_ONLINE" to "Мультиплеер (Wi-Fi)",
         "BOT_SETUP_TITLE" to "Офлайн Настройки",
@@ -177,7 +195,10 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
         "LOST_TITLE" to "ПОРАЖЕНИЕ! ВЫ ДУРАК!",
         "DRAW_TITLE" to "НИЧЬЯ!",
         "DISC_TITLE" to "Игрок отключился!",
-        "STATUS_TITLE_LABEL" to "Дурак Классический"
+        "STATUS_TITLE_LABEL" to "Дурачок Оффлайн",
+        "CHANGELOG_BTN" to "Изменения",
+        "CHANGELOG_TITLE" to "История изменений",
+        "CHANGELOG_TEXT" to "Версия 0.0.1_01\n\n• Игра переименована в «Дурачок Оффлайн»!\n• Исправлена и ускорена работа ИИ-бота в одиночных играх.\n• Улучшена тасовка карт (семикратное перемешивание) для предотвращения раздач одной масти подряд.\n• Добавлен расширенный выбор настроек лобби мультиплеера с поддержкой колод (36 и 52 карты) и лимита игроков (от 2 до 6 игроков).\n• Визуальное оформление обновлено под стиль «Clean Minimalism»."
     )
 
     fun getString(key: String): String {
@@ -210,9 +231,10 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
     // Starts offline bot match
     fun startOfflineMatch() {
         _activeMode.value = GameMode.OFFLINE
-        engine.startMatch("Player", "Bot", isBotGame = true)
+        engine.startMatch("Player", "Bot", isBotGame = true, deckSize = 36)
         _gameState.value = engine.createSnapshot().copy(opponentName = "Bot")
         _currentScreen.value = Screen.GAME_TABLE
+        triggerBotRoutineIfNeeded() // Fixes bot not making first move if bot goes first!
     }
 
     // Starts multiplayer matchmaking: Creates a Host room
@@ -227,7 +249,7 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
                 if (netState == MultiplayerManager.State.CONNECTED && _activeMode.value == GameMode.ONLINE_HOST) {
                     // Initialize game and send immediately
                     delay(300) // gentle networking stabilization delay
-                    engine.startMatch("Host", "Guest", isBotGame = false)
+                    engine.startMatch("Host", "Guest", isBotGame = false, deckSize = _mpLobbyDeckSize.value)
                     pushHostStateToClient()
                     _currentScreen.value = Screen.GAME_TABLE
                 }
@@ -402,7 +424,8 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
         val snapshot = engine.createSnapshot()
         if (snapshot.matchStatus != MatchStatus.PLAYING) return
 
-        val isBotActiveTurn = (engine.attackerId == "opponent") || (engine.attackerId == "player" && engine.tablePairs.any { it.defenseCard == null })
+        val isBotActiveTurn = (engine.attackerId == "opponent" && (engine.tablePairs.isEmpty() || engine.tablePairs.all { it.defenseCard != null })) ||
+                              (engine.attackerId == "player" && engine.tablePairs.any { it.defenseCard == null })
         if (isBotActiveTurn && !_botThinking.value) {
             _botThinking.value = true
             viewModelScope.launch {

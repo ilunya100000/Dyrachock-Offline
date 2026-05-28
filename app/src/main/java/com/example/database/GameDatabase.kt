@@ -18,7 +18,9 @@ data class GameStat(
     val mode: String,          // "OFFLINE", "ONLINE"
     val result: String,        // "WON", "LOST", "DRAW"
     val opponentName: String,
-    val durationSeconds: Long = 0
+    val durationSeconds: Long = 0,
+    val matchLogEn: String = "",
+    val matchLogRu: String = ""
 )
 
 @Dao

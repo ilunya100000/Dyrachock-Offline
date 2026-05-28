@@ -24,8 +24,10 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
@@ -95,17 +97,9 @@ fun MainMenuScreen(viewModel: DurakViewModel, statsList: List<GameStat>) {
         // TOP: Dynamic Language Switching & Brand Glow
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
+            horizontalArrangement = Arrangement.End,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = "CLEAN MINIMALISM",
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
-                letterSpacing = 1.5.sp
-            )
-
             Button(
                 onClick = { viewModel.toggleLanguage() },
                 colors = ButtonDefaults.buttonColors(
@@ -170,10 +164,10 @@ fun MainMenuScreen(viewModel: DurakViewModel, statsList: List<GameStat>) {
 
             Text(
                 text = viewModel.getString("APP_TITLE"),
-                fontSize = 44.sp,
+                fontSize = 32.sp,
                 fontWeight = FontWeight.Black,
                 fontFamily = FontFamily.SansSerif,
-                letterSpacing = 4.sp,
+                letterSpacing = 1.sp,
                 color = MaterialTheme.colorScheme.onBackground
             )
 
@@ -223,7 +217,7 @@ fun MainMenuScreen(viewModel: DurakViewModel, statsList: List<GameStat>) {
 
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
-                            text = "$winsPercent%",
+                            text = if (totalGames >= 5) "$winsPercent%" else "—",
                             fontSize = 20.sp,
                             fontWeight = FontWeight.Black,
                             color = MaterialTheme.colorScheme.tertiary
@@ -324,7 +318,7 @@ fun MainMenuScreen(viewModel: DurakViewModel, statsList: List<GameStat>) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "0.0.1_01",
+                    text = "0.1",
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f)
@@ -380,6 +374,7 @@ fun MainMenuScreen(viewModel: DurakViewModel, statsList: List<GameStat>) {
 @Composable
 fun OfflineSetupScreen(viewModel: DurakViewModel) {
     val isHard by viewModel.isBotHard.collectAsStateWithLifecycle()
+    val appLanguage by viewModel.appLanguage.collectAsStateWithLifecycle()
 
     Column(
         modifier = Modifier
@@ -466,6 +461,57 @@ fun OfflineSetupScreen(viewModel: DurakViewModel) {
                 }
             }
 
+            Text(
+                text = if (appLanguage == AppLanguage.RU) "Режим Игры" else "Game Variant",
+                fontSize = 15.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
+                modifier = Modifier.padding(top = 20.dp, bottom = 12.dp)
+            )
+
+            val subMode by viewModel.offlineSubMode.collectAsStateWithLifecycle()
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(24.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                    .padding(4.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(if (subMode == com.example.viewmodel.DurakViewModel.OfflineSubMode.CLASSIC) MaterialTheme.colorScheme.primary else Color.Transparent)
+                        .clickable { viewModel.setOfflineSubMode(com.example.viewmodel.DurakViewModel.OfflineSubMode.CLASSIC) }
+                        .padding(vertical = 14.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = if (appLanguage == AppLanguage.RU) "Классический" else "Classic",
+                        color = if (subMode == com.example.viewmodel.DurakViewModel.OfflineSubMode.CLASSIC) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp
+                    )
+                }
+
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(if (subMode == com.example.viewmodel.DurakViewModel.OfflineSubMode.TRANSFER) MaterialTheme.colorScheme.primary else Color.Transparent)
+                        .clickable { viewModel.setOfflineSubMode(com.example.viewmodel.DurakViewModel.OfflineSubMode.TRANSFER) }
+                        .padding(vertical = 14.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = if (appLanguage == AppLanguage.RU) "Переводной (Beta)" else "Passing (Beta)",
+                        color = if (subMode == com.example.viewmodel.DurakViewModel.OfflineSubMode.TRANSFER) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp
+                    )
+                }
+            }
+
             Spacer(modifier = Modifier.height(24.dp))
 
             // Bot behavior descriptive Card
@@ -484,7 +530,7 @@ fun OfflineSetupScreen(viewModel: DurakViewModel) {
             ) {
                 Column(modifier = Modifier.padding(20.dp)) {
                     Text(
-                        text = if (isHard) "AI ANALYTICAL BOT" else "DECENT AMATEUR BOT",
+                        text = if (subMode == com.example.viewmodel.DurakViewModel.OfflineSubMode.TRANSFER) "TRANSFER RULES" else if (isHard) "AI ANALYTICAL BOT" else "DECENT AMATEUR BOT",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.secondary,
@@ -492,7 +538,13 @@ fun OfflineSetupScreen(viewModel: DurakViewModel) {
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = if (isHard) {
+                        text = if (subMode == com.example.viewmodel.DurakViewModel.OfflineSubMode.TRANSFER) {
+                            if (appLanguage == AppLanguage.RU) {
+                                "Режим Переводного Дурака активирован! Вы или ИИ-бoт можете перевести защитную обязанность на оппонента, подкинув карту совпадающего достоинства. Бот умеет грамотно оценивать риски перевода."
+                            } else {
+                                "Transfer rules applied! You or the bot can transfer defending duty by matching the rank of the attacking cards. The bot is fully optimized to transfer tactically!"
+                            }
+                        } else if (isHard) {
                             "Defends with cold calculation. Tracks all played cards, saves trumps for endgame clutches, and prioritizes strategic discard sequences."
                         } else {
                             "Plays casual valid combinations. Excellent for beginners looking to learn basic durak card sequencing."
@@ -1048,7 +1100,7 @@ fun GameTableScreen(viewModel: DurakViewModel) {
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = if (viewModel.activeMode.value == GameMode.OFFLINE) "OFFLINE VS AI" else "P2P ONLINE",
+                                text = if (viewModel.activeMode.value == com.example.model.GameMode.OFFLINE) "OFFLINE VS AI" else "P2P ONLINE",
                                 color = Color(0xFF00315B),
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Black,
@@ -1133,63 +1185,78 @@ fun GameTableScreen(viewModel: DurakViewModel) {
                             )
                         }
                     } else {
-                        // Display table active card pairs
-                        Row(
+                        // Display table active card pairs (chunked beautifully into rows of up to 3 pairs to wrap neatly)
+                        val chunkedPairs = snapshot.tablePairs.chunked(3)
+                        Column(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(12.dp),
-                            horizontalArrangement = Arrangement.Center,
-                            verticalAlignment = Alignment.CenterVertically
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            for (pair in snapshot.tablePairs) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(92.dp, 124.dp)
-                                        .padding(horizontal = 4.dp)
+                            for (rowPairs in chunkedPairs) {
+                                Row(
+                                    horizontalArrangement = Arrangement.Center,
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    // Underneath card (The attacking card)
-                                    CardComponent(
-                                        card = pair.attackCard,
-                                        faceUp = true,
-                                        onClick = { viewModel.playCard(pair.attackCard) },
-                                        modifier = Modifier
-                                            .align(Alignment.TopStart)
-                                            .size(70.dp, 102.dp)
-                                    )
-
-                                    // Overlap card (The defensive card, if beat)
-                                    if (pair.defenseCard != null) {
-                                        CardComponent(
-                                            card = pair.defenseCard,
-                                            faceUp = true,
-                                            onClick = {},
-                                            modifier = Modifier
-                                                .align(Alignment.BottomEnd)
-                                                .size(70.dp, 102.dp)
-                                                .shadow(6.dp, RoundedCornerShape(12.dp))
-                                        )
-                                    } else {
-                                        // Visual highlight helper pointing that card needs matching defense
+                                    for (pair in rowPairs) {
                                         Box(
                                             modifier = Modifier
-                                                .align(Alignment.BottomEnd)
-                                                .size(70.dp, 102.dp)
-                                                .clip(RoundedCornerShape(12.dp))
-                                                .border(
-                                                    1.5.dp,
-                                                    Brush.linearGradient(listOf(Color(0xFFD1E4FF).copy(alpha = 0.4f), Color.Transparent)),
-                                                    RoundedCornerShape(12.dp)
-                                                )
-                                                .background(Color.White.copy(alpha = 0.03f)),
-                                            contentAlignment = Alignment.Center
+                                                .size(92.dp, 124.dp)
+                                                .padding(horizontal = 4.dp)
                                         ) {
-                                            Text(
-                                                text = if (appLanguage == AppLanguage.RU) "БЕЙ" else "DEFEND",
-                                                color = Color.White.copy(alpha = 0.35f),
-                                                fontWeight = FontWeight.Black,
-                                                fontSize = 9.sp,
-                                                letterSpacing = 0.5.sp
+                                            // Underneath card (The attacking card)
+                                            CardComponent(
+                                                card = pair.attackCard,
+                                                faceUp = true,
+                                                onClick = {
+                                                    val isMp = (viewModel.activeMode.value == com.example.model.GameMode.ONLINE_HOST || viewModel.activeMode.value == com.example.model.GameMode.ONLINE_CLIENT)
+                                                    if (isMp && pair.defenseCard == null) {
+                                                        viewModel.takeBackCard(pair.attackCard)
+                                                    } else {
+                                                        viewModel.playCard(pair.attackCard)
+                                                    }
+                                                },
+                                                modifier = Modifier
+                                                    .align(Alignment.TopStart)
+                                                    .size(70.dp, 102.dp)
                                             )
+
+                                            // Overlap card (The defensive card, if beat)
+                                            if (pair.defenseCard != null) {
+                                                CardComponent(
+                                                    card = pair.defenseCard,
+                                                    faceUp = true,
+                                                    onClick = {},
+                                                    modifier = Modifier
+                                                        .align(Alignment.BottomEnd)
+                                                        .size(70.dp, 102.dp)
+                                                        .shadow(6.dp, RoundedCornerShape(12.dp))
+                                                )
+                                            } else {
+                                                // Visual highlight helper pointing that card needs matching defense
+                                                Box(
+                                                    modifier = Modifier
+                                                        .align(Alignment.BottomEnd)
+                                                        .size(70.dp, 102.dp)
+                                                        .clip(RoundedCornerShape(12.dp))
+                                                        .border(
+                                                            1.5.dp,
+                                                            Brush.linearGradient(listOf(Color(0xFFD1E4FF).copy(alpha = 0.4f), Color.Transparent)),
+                                                            RoundedCornerShape(12.dp)
+                                                        )
+                                                        .background(Color.White.copy(alpha = 0.03f)),
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    Text(
+                                                        text = if (appLanguage == AppLanguage.RU) "БЕЙ" else "DEFEND",
+                                                        color = Color.White.copy(alpha = 0.35f),
+                                                        fontWeight = FontWeight.Black,
+                                                        fontSize = 9.sp,
+                                                        letterSpacing = 0.5.sp
+                                                    )
+                                                }
+                                            }
                                         }
                                     }
                                 }
@@ -1208,19 +1275,38 @@ fun GameTableScreen(viewModel: DurakViewModel) {
                 ) {
                     // Deck / Trump panel
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        snapshot.trumpCard?.let { trump ->
-                            Box(contentAlignment = Alignment.Center) {
-                                // Laying trump card horizontally as bottom base of deck
+                        Box(
+                            modifier = Modifier.padding(end = 16.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            val trump = snapshot.trumpCard
+                            if (trump != null) {
+                                // 1. Trump card horizontal bottom base
                                 CardComponent(
                                     card = trump,
                                     faceUp = true,
                                     onClick = {},
                                     modifier = Modifier
-                                        .size(48.dp, 32.dp)
-                                        .border(1.dp, Color.White.copy(alpha = 0.2f), RoundedCornerShape(6.dp))
+                                        .size(80.dp, 56.dp)
+                                        .align(Alignment.Center)
+                                        .offset(x = (-14).dp)
                                 )
                             }
-                            Spacer(modifier = Modifier.width(10.dp))
+
+                            if (snapshot.deckSize > 0) {
+                                // 2. Stack of card backs on top of it
+                                if (snapshot.deckSize > 1) {
+                                    CardBackComponent(
+                                        modifier = Modifier
+                                            .size(56.dp, 80.dp)
+                                            .offset(x = 2.dp, y = (-2).dp)
+                                    )
+                                }
+                                CardBackComponent(
+                                    modifier = Modifier
+                                        .size(56.dp, 80.dp)
+                                )
+                            }
                         }
 
                         Column {
@@ -1230,8 +1316,9 @@ fun GameTableScreen(viewModel: DurakViewModel) {
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 13.sp
                             )
+                            val trumpLabel = if (appLanguage == AppLanguage.RU) snapshot.trumpSuit.ruLabel else snapshot.trumpSuit.enLabel
                             Text(
-                                text = "${viewModel.getString("TRUMP")}: ${snapshot.trumpSuit.symbol} (${snapshot.trumpSuit.enLabel})",
+                                text = "${viewModel.getString("TRUMP")}: ${snapshot.trumpSuit.symbol} ($trumpLabel)",
                                 color = if (snapshot.trumpSuit.colorRed) Color(0xFFFF5252) else Color.White.copy(alpha = 0.7f),
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 11.sp
@@ -1498,7 +1585,7 @@ fun GameTableScreen(viewModel: DurakViewModel) {
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            if (viewModel.activeMode.value == GameMode.OFFLINE) {
+                            if (viewModel.activeMode.value == com.example.model.GameMode.OFFLINE) {
                                 Button(
                                     onClick = { viewModel.startOfflineMatch() },
                                     modifier = Modifier.weight(1f),
@@ -1535,8 +1622,49 @@ fun CardComponent(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    var animTriggered by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        animTriggered = true
+    }
+
+    val scale by androidx.compose.animation.core.animateFloatAsState(
+        targetValue = if (animTriggered) 1f else 0.5f,
+        animationSpec = androidx.compose.animation.core.spring(
+            dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
+            stiffness = androidx.compose.animation.core.Spring.StiffnessMedium
+        ),
+        label = "CardScale"
+    )
+
+    val translationY by androidx.compose.animation.core.animateFloatAsState(
+        targetValue = if (animTriggered) 0f else 60f,
+        animationSpec = androidx.compose.animation.core.spring(
+            dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
+            stiffness = androidx.compose.animation.core.Spring.StiffnessLow
+        ),
+        label = "CardTranslationY"
+    )
+
+    if (!faceUp) {
+        CardBackComponent(
+            modifier = modifier
+                .graphicsLayer(
+                    scaleX = scale,
+                    scaleY = scale,
+                    translationY = translationY
+                )
+                .clickable { onClick() }
+        )
+        return
+    }
+
     Box(
         modifier = modifier
+            .graphicsLayer(
+                scaleX = scale,
+                scaleY = scale,
+                translationY = translationY
+            )
             .shadow(4.dp, RoundedCornerShape(14.dp))
             .clip(RoundedCornerShape(14.dp))
             .background(Color.White)
@@ -1607,15 +1735,14 @@ fun CardBackComponent(modifier: Modifier = Modifier) {
         modifier = modifier
             .shadow(2.dp, RoundedCornerShape(10.dp))
             .clip(RoundedCornerShape(10.dp))
-            .size(38.dp, 56.dp)
-            .background(Color.White.copy(alpha = 0.12f))
-            .border(1.dp, Color.White.copy(alpha = 0.25f), RoundedCornerShape(10.dp)),
+            .background(MaterialTheme.colorScheme.primaryContainer)
+            .border(1.5.dp, MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.25f), RoundedCornerShape(10.dp)),
         contentAlignment = Alignment.Center
     ) {
         Box(
             modifier = Modifier
-                .size(10.dp)
-                .background(Color.White.copy(alpha = 0.2f), CircleShape)
+                .size(16.dp)
+                .background(MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.15f), CircleShape)
         )
     }
 }
@@ -1624,6 +1751,7 @@ fun CardBackComponent(modifier: Modifier = Modifier) {
 @Composable
 fun StatsBoardScreen(viewModel: DurakViewModel, statsList: List<GameStat>) {
     val dateFormat = remember { SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()) }
+    val appLanguage by viewModel.appLanguage.collectAsStateWithLifecycle()
 
     Column(
         modifier = Modifier
@@ -1673,6 +1801,7 @@ fun StatsBoardScreen(viewModel: DurakViewModel, statsList: List<GameStat>) {
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 items(statsList) { stat ->
+                    var expanded by remember { mutableStateOf(false) }
                     Card(
                         colors = CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.surface
@@ -1680,44 +1809,106 @@ fun StatsBoardScreen(viewModel: DurakViewModel, statsList: List<GameStat>) {
                         shape = RoundedCornerShape(18.dp),
                         modifier = Modifier
                             .fillMaxWidth()
+                            .clickable { expanded = !expanded }
                             .border(
                                 1.dp,
                                 MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f),
                                 RoundedCornerShape(18.dp)
                             )
                     ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column {
-                                Text(
-                                    text = "Opponent: ${stat.opponentName}",
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 14.sp
-                                )
-                                Text(
-                                    text = dateFormat.format(Date(stat.timestamp)),
-                                    fontSize = 11.sp,
-                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
-                                )
-                                Text(
-                                    text = "Mode: ${stat.mode}",
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
+                        Column {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column {
+                                    val oppPrefix = if (appLanguage == AppLanguage.RU) "Оппонент" else "Opponent"
+                                    val modePrefix = if (appLanguage == AppLanguage.RU) "Режим" else "Mode"
+                                    Text(
+                                        text = "$oppPrefix: ${stat.opponentName}",
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 14.sp
+                                    )
+                                    Text(
+                                        text = dateFormat.format(Date(stat.timestamp)),
+                                        fontSize = 11.sp,
+                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                                    )
+                                    Text(
+                                        text = "$modePrefix: ${stat.mode}",
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    val labelRes = when (stat.result) {
+                                        "WON" -> if (appLanguage == AppLanguage.RU) "ПОБЕДА" else "WON"
+                                        "LOST" -> if (appLanguage == AppLanguage.RU) "ПОРАЖЕНИЕ" else "LOST"
+                                        else -> if (appLanguage == AppLanguage.RU) "НИЧЬЯ" else "DRAW"
+                                    }
+                                    Text(
+                                        text = labelRes,
+                                        fontWeight = FontWeight.Black,
+                                        fontSize = 14.sp,
+                                        color = if (stat.result == "WON") PrimaryLight else SuitRed
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Icon(
+                                        imageVector = if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                                        contentDescription = "Logs toggle",
+                                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
                             }
 
-                            Text(
-                                text = stat.result,
-                                fontWeight = FontWeight.Black,
-                                fontSize = 16.sp,
-                                color = if (stat.result == "WON") PrimaryLight else SuitRed
-                            )
+                            if (expanded) {
+                                val logContent = if (appLanguage == AppLanguage.RU) {
+                                    stat.matchLogRu.ifEmpty { stat.matchLogEn }
+                                } else {
+                                    stat.matchLogEn.ifEmpty { stat.matchLogRu }
+                                }
+
+                                val logLines = logContent.split("\n").filter { it.isNotBlank() }
+
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
+                                        .padding(12.dp)
+                                ) {
+                                    Text(
+                                        text = if (appLanguage == AppLanguage.RU) "Ход игры:" else "Battle History:",
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 12.sp,
+                                        color = MaterialTheme.colorScheme.secondary,
+                                        modifier = Modifier.padding(bottom = 6.dp)
+                                    )
+                                    if (logLines.isEmpty()) {
+                                        Text(
+                                            text = if (appLanguage == AppLanguage.RU) "Логи отсутствуют для этого матча" else "No logs captured for this game",
+                                            fontSize = 11.sp,
+                                            fontStyle = FontStyle.Italic,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                                        )
+                                    } else {
+                                        logLines.forEach { line ->
+                                            Text(
+                                                text = "• $line",
+                                                fontSize = 11.sp,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                modifier = Modifier.padding(vertical = 2.dp),
+                                                lineHeight = 15.sp
+                                            )
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                 }

@@ -23,22 +23,32 @@ class DurakEngine {
     var defenderId: String = "opponent" // the ID of player who is defending
 
     var matchStatus: MatchStatus = MatchStatus.NOT_STARTED
-    val gameLog: MutableList<String> = mutableListOf()
+    var isTransferMode: Boolean = false
+    val gameLogEn: MutableList<String> = mutableListOf()
+    val gameLogRu: MutableList<String> = mutableListOf()
 
-    fun log(message: String) {
-        gameLog.add(message)
-        if (gameLog.size > 200) {
-            gameLog.removeAt(0)
+    fun log(en: String, ru: String) {
+        gameLogEn.add(en)
+        gameLogRu.add(ru)
+        if (gameLogEn.size > 200) {
+            gameLogEn.removeAt(0)
+            gameLogRu.removeAt(0)
         }
     }
 
+    fun log(message: String) {
+        log(message, message)
+    }
+
     // Start a new match
-    fun startMatch(player1Name: String, player2Name: String, isBotGame: Boolean, deckSize: Int = 36) {
+    fun startMatch(player1Name: String, player2Name: String, isBotGame: Boolean, deckSize: Int = 36, isTransferMode: Boolean = false) {
+        this.isTransferMode = isTransferMode
         deck.clear()
         tablePairs.clear()
         playerHand.clear()
         opponentHand.clear()
-        gameLog.clear()
+        gameLogEn.clear()
+        gameLogRu.clear()
         discardPileSize = 0
 
         // Create deck of specified size
@@ -65,19 +75,19 @@ class DurakEngine {
             trumpSuit = trump.suit
             // Place trump back to the bottom of the deck
             deck.add(0, trump)
-            log("Trump suit is ${trumpSuit.enLabel} (${trumpSuit.symbol}). Trump card: ${trump.rank.symbol}${trumpSuit.symbol}")
+            log("Trump suit is ${trumpSuit.enLabel} (${trumpSuit.symbol}). Trump card: ${trump.rank.symbol}${trumpSuit.symbol}", "Козырная масть - ${trumpSuit.ruLabel} (${trumpSuit.symbol}). Козырь: ${trump.rank.symbol}${trumpSuit.symbol}")
         } else {
             // Unlikely to be empty, but fallback
             trumpCard = null
             trumpSuit = Suit.SPADES
-            log("Trump suit is ${trumpSuit.enLabel}")
+            log("Trump suit is ${trumpSuit.enLabel}", "Козыри - ${trumpSuit.ruLabel}")
         }
 
         // Determine who plays first (lowest trump)
         determineFirstPlayer()
 
         matchStatus = MatchStatus.PLAYING
-        log("Match started! Attacker: ${if (attackerId == "player") player1Name else player2Name}")
+        log("Match started! Attacker: ${if (attackerId == "player") player1Name else player2Name}", "Матч начался! Нападающий: ${if (attackerId == "player") player1Name else player2Name}")
     }
 
     private fun dealCards() {
@@ -100,16 +110,16 @@ class DurakEngine {
         if (minPlayerTrump < minOpponentTrump) {
             attackerId = "player"
             defenderId = "opponent"
-            log("You have the lowest trump (${minPlayerTrump.toRankSymbol()}${trumpSuit.symbol}). You attack first.")
+            log("You have the lowest trump (${minPlayerTrump.toRankSymbol()}${trumpSuit.symbol}). You attack first.", "У вас самый маленький козырь (${minPlayerTrump.toRankSymbol()}${trumpSuit.symbol}). Вы ходите первым.")
         } else if (minOpponentTrump < minPlayerTrump) {
             attackerId = "opponent"
             defenderId = "player"
-            log("Opponent has the lowest trump (${minOpponentTrump.toRankSymbol()}${trumpSuit.symbol}). Opponent attacks first.")
+            log("Opponent has the lowest trump (${minOpponentTrump.toRankSymbol()}${trumpSuit.symbol}). Opponent attacks first.", "У оппонента самый маленький козырь (${minOpponentTrump.toRankSymbol()}${trumpSuit.symbol}). Оппонент ходит первым.")
         } else {
             // Default to player if nobody has trumps or tied
             attackerId = "player"
             defenderId = "opponent"
-            log("No trumps in hand. You attack first.")
+            log("No trumps in hand. You attack first.", "Козырей в руках нет. Вы ходите первым.")
         }
     }
 
@@ -145,7 +155,7 @@ class DurakEngine {
         if (isValid) {
             hand.remove(card)
             tablePairs.add(CardPair(attackCard = card))
-            log("${if (playerId == "player") "You" else "Opponent"} threw ${card.rank.symbol}${card.suit.symbol}")
+            log("${if (playerId == "player") "You" else "Opponent"} threw ${card.rank.symbol}${card.suit.symbol}", "${if (playerId == "player") "Вы бросили" else "Оппонент бросил"} ${card.rank.symbol}${card.suit.symbol}")
             return true
         }
         return false
@@ -166,7 +176,7 @@ class DurakEngine {
         if (defenseCard.canBeat(attackCard, trumpSuit)) {
             hand.remove(defenseCard)
             tablePairs[pairIndex] = CardPair(attackCard, defenseCard)
-            log("${if (playerId == "player") "You" else "Opponent"} beat ${attackCard.rank.symbol}${attackCard.suit.symbol} with ${defenseCard.rank.symbol}${defenseCard.suit.symbol}")
+            log("${if (playerId == "player") "You" else "Opponent"} beat ${attackCard.rank.symbol}${attackCard.suit.symbol} with ${defenseCard.rank.symbol}${defenseCard.suit.symbol}", "${if (playerId == "player") "Вы побили" else "Оппонент побил"} ${attackCard.rank.symbol}${attackCard.suit.symbol} картой ${defenseCard.rank.symbol}${defenseCard.suit.symbol}")
             return true
         }
         return false
@@ -178,7 +188,7 @@ class DurakEngine {
         if (defenderId != playerId) return false
         if (tablePairs.isEmpty()) return false
 
-        log("${if (playerId == "player") "You" else "Opponent"} took the cards.")
+        log("${if (playerId == "player") "You" else "Opponent"} took the cards.", "${if (playerId == "player") "Вы взяли" else "Оппонент взял"} карты.")
 
         // Transfer all cards (attack & defense) to the defender's hand
         val defenderHand = if (playerId == "player") playerHand else opponentHand
@@ -207,7 +217,7 @@ class DurakEngine {
         val allDefended = tablePairs.all { it.defenseCard != null }
         if (!allDefended) return false
 
-        log("Bito! Cards discarded.")
+        log("Bito! Cards discarded.", "Бито! Карты сброшены.")
         discardPileSize += tablePairs.size * 2
         tablePairs.clear()
 
@@ -243,15 +253,40 @@ class DurakEngine {
 
             if (playerEmpty && opponentEmpty) {
                 matchStatus = MatchStatus.DRAW
-                log("Draw! Beautiful game, both ran out of cards.")
+                log("Draw! Beautiful game, both ran out of cards.", "Ничья! Отличная игра, у обоих закончились карты.")
             } else if (playerEmpty) {
                 matchStatus = MatchStatus.WON
-                log("You won! Victory is yours!")
+                log("You won! Victory is yours!", "Вы победили! Победа за вами!")
             } else if (opponentEmpty) {
                 matchStatus = MatchStatus.LOST
-                log("Opponent won! You are the Durak!")
+                log("Opponent won! You are the Durak!", "Оппонент победил! Вы остались в дураках!")
             }
         }
+    }
+
+    fun performTransfer(playerId: String, card: Card): Boolean {
+        if (!isTransferMode) return false
+        if (defenderId != playerId) return false
+        if (tablePairs.isEmpty()) return false
+        if (!tablePairs.all { it.defenseCard == null }) return false
+
+        val hand = if (playerId == "player") playerHand else opponentHand
+        if (!hand.contains(card)) return false
+
+        val matchesRank = tablePairs.any { it.attackCard.rank == card.rank }
+        if (!matchesRank) return false
+
+        hand.remove(card)
+        tablePairs.add(CardPair(attackCard = card))
+
+        log("${if (playerId == "player") "You" else "Opponent"} transferred with ${card.rank.symbol}${card.suit.symbol}!",
+            "${if (playerId == "player") "Вы" else "Оппонент"} перевели картой ${card.rank.symbol}${card.suit.symbol}!")
+
+        val temp = attackerId
+        attackerId = defenderId
+        defenderId = temp
+
+        return true
     }
 
     // Easy: plays first valid move
@@ -299,6 +334,16 @@ class DurakEngine {
             }
         } else {
             // Bot is defending
+            val canBotTransfer = isTransferMode && tablePairs.isNotEmpty() && tablePairs.all { it.defenseCard == null }
+            if (canBotTransfer) {
+                val transferCard = opponentHand.find { card ->
+                    tablePairs.any { it.attackCard.rank == card.rank }
+                }
+                if (transferCard != null) {
+                    return performTransfer("opponent", transferCard)
+                }
+            }
+
             // Find an undefended card
             val undefendedPair = tablePairs.find { it.defenseCard == null }
             if (undefendedPair != null) {
@@ -359,7 +404,9 @@ class DurakEngine {
             opponentName = "Opponent",
             matchStatus = matchStatus,
             attackerPlayerId = attackerId,
-            gameLog = gameLog.toList(),
+            gameLog = gameLogEn.toList(),
+            gameLogEn = gameLogEn.toList(),
+            gameLogRu = gameLogRu.toList(),
             canTake = canTake,
             canBito = canBito
         )
@@ -392,7 +439,9 @@ class DurakEngine {
             this.defenderId = "player"
         }
 
-        this.gameLog.clear()
-        this.gameLog.addAll(snapshotState.gameLog)
+        this.gameLogEn.clear()
+        this.gameLogEn.addAll(snapshotState.gameLogEn)
+        this.gameLogRu.clear()
+        this.gameLogRu.addAll(snapshotState.gameLogRu)
     }
 }

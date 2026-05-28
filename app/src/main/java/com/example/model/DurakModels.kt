@@ -77,6 +77,8 @@ data class GameStateSnapshot(
     val matchStatus: MatchStatus = MatchStatus.NOT_STARTED,
     val attackerPlayerId: String = "", // ID of the player currently attacking
     val gameLog: List<String> = emptyList(),
+    val gameLogEn: List<String> = emptyList(),
+    val gameLogRu: List<String> = emptyList(),
     val canTake: Boolean = false,      // Can the defender take cards from table?
     val canBito: Boolean = false       // Can the attacker finish attack? (Bito / Pass)
 )

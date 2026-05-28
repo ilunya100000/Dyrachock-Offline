@@ -51,6 +51,8 @@ object NetworkProtocol {
         val matchStatusStr = snapshot.matchStatus.name
         
         val logsStr = snapshot.gameLog.joinToString(";") { it.replace(";", "").replace("\n", "") }
+        val logsEnStr = snapshot.gameLogEn.joinToString(";") { it.replace(";", "").replace("\n", "") }
+        val logsRuStr = snapshot.gameLogRu.joinToString(";") { it.replace(";", "").replace("\n", "") }
         val tablePairsStr = snapshot.tablePairs.joinToString(";") { encodeCardPair(it) }
         val hostHandStr = hostHand.joinToString(";") { encodeCard(it) }
         val clientHandStr = clientHand.joinToString(";") { encodeCard(it) }
@@ -63,6 +65,8 @@ object NetworkProtocol {
             append("ATTACKERID:").append(attackerIdStr).append("\n")
             append("MATCHSTATUS:").append(matchStatusStr).append("\n")
             append("LOGS:").append(logsStr).append("\n")
+            append("LOGSEN:").append(logsEnStr).append("\n")
+            append("LOGSRU:").append(logsRuStr).append("\n")
             append("TABLE:").append(tablePairsStr).append("\n")
             append("HOST_HAND:").append(hostHandStr).append("\n")
             append("CLIENT_HAND:").append(clientHandStr).append("\n")
@@ -94,6 +98,12 @@ object NetworkProtocol {
             val logsRaw = map["LOGS"] ?: ""
             val logs = if (logsRaw.isEmpty()) emptyList() else logsRaw.split(";")
             
+            val logsEnRaw = map["LOGSEN"] ?: ""
+            val logsEn = if (logsEnRaw.isEmpty()) emptyList() else logsEnRaw.split(";")
+
+            val logsRuRaw = map["LOGSRU"] ?: ""
+            val logsRu = if (logsRuRaw.isEmpty()) emptyList() else logsRuRaw.split(";")
+            
             val tableRaw = map["TABLE"] ?: ""
             val tablePairs = if (tableRaw.isEmpty()) emptyList() else {
                 tableRaw.split(";").mapNotNull { decodeCardPair(it) }
@@ -117,6 +127,8 @@ object NetworkProtocol {
                 attackerId = attackerId,
                 matchStatus = matchStatus,
                 gameLog = logs,
+                gameLogEn = logsEn,
+                gameLogRu = logsRu,
                 tablePairs = tablePairs,
                 hostHand = hostHand,
                 clientHand = clientHand
@@ -134,6 +146,8 @@ object NetworkProtocol {
         val attackerId: String,
         val matchStatus: MatchStatus,
         val gameLog: List<String>,
+        val gameLogEn: List<String>,
+        val gameLogRu: List<String>,
         val tablePairs: List<CardPair>,
         val hostHand: List<Card>,
         val clientHand: List<Card>

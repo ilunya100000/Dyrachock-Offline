@@ -82,6 +82,18 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
         _mpLobbyDeckSize.value = size
     }
 
+    enum class OfflineSubMode {
+        CLASSIC,
+        TRANSFER
+    }
+
+    private val _offlineSubMode = MutableStateFlow(OfflineSubMode.CLASSIC)
+    val offlineSubMode = _offlineSubMode.asStateFlow()
+
+    fun setOfflineSubMode(subMode: OfflineSubMode) {
+        _offlineSubMode.value = subMode
+    }
+
     fun setMpLobbyPlayersCount(count: Int) {
         _mpLobbyPlayersCount.value = count
     }
@@ -150,10 +162,10 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
         "LOST_TITLE" to "DEFEAT! YOU ARE THE DURAK!",
         "DRAW_TITLE" to "DRAW GAME!",
         "DISC_TITLE" to "Opponent disconnected!",
-        "STATUS_TITLE_LABEL" to "Dyrachok Offline",
+        "STATUS_TITLE_LABEL" to "Animation Update",
         "CHANGELOG_BTN" to "Changelog",
         "CHANGELOG_TITLE" to "Version Changelog",
-        "CHANGELOG_TEXT" to "Version 0.0.1_01\n\n• Renamed the game to Dyrachok Offline!\n• Fixed Local Bot behavior to make moves instantly and correctly.\n• Improved card blending/shuffling algorithms (7x mixing) to prevent single-suit streaks.\n• Added Advanced Multiplayer Lobby customization with custom deck sizes (36 vs 52 cards) and player limit options (2 to 6 players).\n• Beautiful Material 3 Clean Minimalism visual appearance."
+        "CHANGELOG_TEXT" to "Version 0.1 (Animation Update)\n\n• Visualized deck cards dynamically with 3D overlapping layers.\n• Refactored the main menu to resolve overlapping texts on mobile screens.\n• Visualized bilingual, localized, step-by-step match logs directly in the archives section.\n• Integrated buttery-smooth spring physics animations for all card transactions.\n• Implemented the tactical Translational Durak (Переводной) mode offline against a bot.\n• Enabled taking back your own undefended attacking cards in multiplayer matches.\n• Cleared redundant development tags from the application view forever."
     )
 
     private val ruTranslations = mapOf(
@@ -195,10 +207,10 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
         "LOST_TITLE" to "ПОРАЖЕНИЕ! ВЫ ДУРАК!",
         "DRAW_TITLE" to "НИЧЬЯ!",
         "DISC_TITLE" to "Игрок отключился!",
-        "STATUS_TITLE_LABEL" to "Дурачок Оффлайн",
+        "STATUS_TITLE_LABEL" to "Анимационное обновление",
         "CHANGELOG_BTN" to "Изменения",
         "CHANGELOG_TITLE" to "История изменений",
-        "CHANGELOG_TEXT" to "Версия 0.0.1_01\n\n• Игра переименована в «Дурачок Оффлайн»!\n• Исправлена и ускорена работа ИИ-бота в одиночных играх.\n• Улучшена тасовка карт (семикратное перемешивание) для предотвращения раздач одной масти подряд.\n• Добавлен расширенный выбор настроек лобби мультиплеера с поддержкой колод (36 и 52 карты) и лимита игроков (от 2 до 6 игроков).\n• Визуальное оформление обновлено под стиль «Clean Minimalism»."
+        "CHANGELOG_TEXT" to "Версия 0.1 (Анимационное обновление)\n\n• Добавлена 3D визуализация стопки колоды карт на игровом столе.\n• Устранены перекрытия элементов текста на экранах мобильных устройств.\n• Реализована детальная двуязычная выгрузка логов ходов прямо в окне архива.\n• Интегрированы плавные переходы раздачи и подкидываний на базе физики упругих пружин.\n• Разработан тактический режим «Переводной дурак» для одиночных матчей против бота.\n• Добавлен отзыв собственных непокрытых карт назад в руку во время мультиплеера.\n• Полностью очищены лишние служебные метки разработчиков."
     )
 
     fun getString(key: String): String {
@@ -231,7 +243,8 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
     // Starts offline bot match
     fun startOfflineMatch() {
         _activeMode.value = GameMode.OFFLINE
-        engine.startMatch("Player", "Bot", isBotGame = true, deckSize = 36)
+        val transferEnabled = (_offlineSubMode.value == OfflineSubMode.TRANSFER)
+        engine.startMatch("Player", "Bot", isBotGame = true, deckSize = 36, isTransferMode = transferEnabled)
         _gameState.value = engine.createSnapshot().copy(opponentName = "Bot")
         _currentScreen.value = Screen.GAME_TABLE
         triggerBotRoutineIfNeeded() // Fixes bot not making first move if bot goes first!
@@ -294,12 +307,24 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
                 }
             } else {
                 // User is Defending.
-                // Highlight or auto-match with the first undefended card on Table
-                val undefendedPair = engine.tablePairs.find { it.defenseCard == null }
-                if (undefendedPair != null) {
-                    if (engine.performDefense("player", undefendedPair.attackCard, card)) {
+                val canTransfer = engine.isTransferMode && 
+                        engine.tablePairs.isNotEmpty() && 
+                        engine.tablePairs.all { it.defenseCard == null } &&
+                        engine.tablePairs.any { it.attackCard.rank == card.rank }
+
+                if (canTransfer) {
+                    if (engine.performTransfer("player", card)) {
                         refreshLocalState()
                         triggerBotRoutineIfNeeded()
+                    }
+                } else {
+                    // Highlight or auto-match with the first undefended card on Table
+                    val undefendedPair = engine.tablePairs.find { it.defenseCard == null }
+                    if (undefendedPair != null) {
+                        if (engine.performDefense("player", undefendedPair.attackCard, card)) {
+                            refreshLocalState()
+                            triggerBotRoutineIfNeeded()
+                        }
                     }
                 }
             }
@@ -330,6 +355,29 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
                 } else null
             }
             if (payload != null) {
+                multiplayerManager.sendMessage(payload)
+            }
+        }
+    }
+
+    fun takeBackCard(card: Card) {
+        val snapshot = _gameState.value
+        if (snapshot.matchStatus != MatchStatus.PLAYING) return
+
+        if (_activeMode.value == GameMode.ONLINE_HOST) {
+            if (engine.attackerId == "player") {
+                val pairIndex = engine.tablePairs.indexOfFirst { it.attackCard == card && it.defenseCard == null }
+                if (pairIndex != -1) {
+                    engine.tablePairs.removeAt(pairIndex)
+                    engine.playerHand.add(card)
+                    engine.log("You took back card ${card.rank.symbol}${card.suit.symbol}", "Вы забрали назад карту ${card.rank.symbol}${card.suit.symbol}")
+                    pushHostStateToClient()
+                }
+            }
+        } else if (_activeMode.value == GameMode.ONLINE_CLIENT) {
+            val isClientAttacking = (snapshot.attackerPlayerId == "opponent")
+            if (isClientAttacking) {
+                val payload = "ACTION_TAKE_BACK:${NetworkProtocol.encodeCard(card)}"
                 multiplayerManager.sendMessage(payload)
             }
         }
@@ -452,6 +500,19 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
                     val card = NetworkProtocol.decodeCard(cardData)
                     if (card != null && engine.performAttack("opponent", card)) {
                         stateChanged = true
+                    }
+                }
+                msg.startsWith("ACTION_TAKE_BACK:") -> {
+                    val cardData = msg.replace("ACTION_TAKE_BACK:", "")
+                    val card = NetworkProtocol.decodeCard(cardData)
+                    if (card != null && engine.attackerId == "opponent") {
+                        val pairIndex = engine.tablePairs.indexOfFirst { it.attackCard == card && it.defenseCard == null }
+                        if (pairIndex != -1) {
+                            engine.tablePairs.removeAt(pairIndex)
+                            engine.opponentHand.add(card)
+                            engine.log("Opponent took back card ${card.rank.symbol}${card.suit.symbol}", "Оппонент забрал назад карту ${card.rank.symbol}${card.suit.symbol}")
+                            stateChanged = true
+                        }
                     }
                 }
                 msg.startsWith("ACTION_DEFEND:") -> {

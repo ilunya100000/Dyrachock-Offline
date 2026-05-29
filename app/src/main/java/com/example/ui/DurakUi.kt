@@ -1,10 +1,17 @@
 package com.example.ui
 
 import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.unit.IntOffset
+import kotlin.math.roundToInt
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -79,6 +86,8 @@ fun DurakApp(viewModel: DurakViewModel) {
 @Composable
 fun MainMenuScreen(viewModel: DurakViewModel, statsList: List<GameStat>) {
     val appLanguage by viewModel.appLanguage.collectAsStateWithLifecycle()
+    var showLanguageDialog by remember { mutableStateOf(false) }
+    var selectedLangTemp by remember { mutableStateOf(appLanguage) }
 
     // Calculate quick stats summary
     val totalGames = statsList.size
@@ -100,20 +109,19 @@ fun MainMenuScreen(viewModel: DurakViewModel, statsList: List<GameStat>) {
             horizontalArrangement = Arrangement.End,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Button(
-                onClick = { viewModel.toggleLanguage() },
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant
-                ),
-                shape = RoundedCornerShape(24.dp),
-                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
-                modifier = Modifier.testTag("lang_toggle")
+            IconButton(
+                onClick = {
+                    selectedLangTemp = appLanguage
+                    showLanguageDialog = true
+                },
+                modifier = Modifier
+                    .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
+                    .testTag("lang_toggle")
             ) {
-                Text(
-                    text = if (appLanguage == AppLanguage.EN) "RU" else "EN",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 13.sp
+                Icon(
+                    imageVector = Icons.Default.Language,
+                    contentDescription = "Change Language",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
@@ -318,7 +326,7 @@ fun MainMenuScreen(viewModel: DurakViewModel, statsList: List<GameStat>) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "0.1",
+                    text = "0.1.1",
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f)
@@ -346,12 +354,14 @@ fun MainMenuScreen(viewModel: DurakViewModel, statsList: List<GameStat>) {
                             )
                         },
                         text = {
-                            Text(
-                                text = viewModel.getString("CHANGELOG_TEXT"),
-                                fontSize = 14.sp,
-                                lineHeight = 20.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                                Text(
+                                    text = viewModel.getString("CHANGELOG_TEXT"),
+                                    fontSize = 14.sp,
+                                    lineHeight = 20.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
                         },
                         confirmButton = {
                             TextButton(onClick = { showChangelogDialog = false }) {
@@ -367,6 +377,83 @@ fun MainMenuScreen(viewModel: DurakViewModel, statsList: List<GameStat>) {
                 }
             }
         }
+    }
+
+    if (showLanguageDialog) {
+        AlertDialog(
+            onDismissRequest = { showLanguageDialog = false },
+            title = {
+                Text(
+                    text = when (appLanguage) {
+                        AppLanguage.RU -> "Выберите язык"
+                        AppLanguage.IT -> "Seleziona lingua"
+                        else -> "Select Language"
+                    },
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    val languages = listOf(
+                        AppLanguage.EN to "English",
+                        AppLanguage.RU to "Русский",
+                        AppLanguage.IT to "Italiano (Beta)"
+                    )
+                    languages.forEach { (lang, label) ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { selectedLangTemp = lang }
+                                .padding(vertical = 8.dp, horizontal = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = (selectedLangTemp == lang),
+                                onClick = { selectedLangTemp = lang }
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text(
+                                text = label,
+                                fontSize = 16.sp,
+                                fontWeight = if (selectedLangTemp == lang) FontWeight.Bold else FontWeight.Normal,
+                                color = if (selectedLangTemp == lang) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.setLanguage(selectedLangTemp)
+                        showLanguageDialog = false
+                    }
+                ) {
+                    Text(
+                        text = when (appLanguage) {
+                            AppLanguage.RU -> "Подтвердить"
+                            AppLanguage.IT -> "Conferma"
+                            else -> "Confirm"
+                        }
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showLanguageDialog = false }
+                ) {
+                    Text(
+                        text = when (appLanguage) {
+                            AppLanguage.RU -> "Отмена"
+                            AppLanguage.IT -> "Annulla"
+                            else -> "Cancel"
+                        }
+                    )
+                }
+            },
+            shape = RoundedCornerShape(28.dp),
+            containerColor = MaterialTheme.colorScheme.surface
+        )
     }
 }
 
@@ -1007,6 +1094,13 @@ fun GameTableScreen(viewModel: DurakViewModel) {
     val snapshot by viewModel.gameState.collectAsStateWithLifecycle()
     val isThinking by viewModel.botThinking.collectAsStateWithLifecycle()
     val appLanguage by viewModel.appLanguage.collectAsStateWithLifecycle()
+    val offlineSubMode by viewModel.offlineSubMode.collectAsStateWithLifecycle()
+    val isTransferEnabled = (viewModel.activeMode.collectAsStateWithLifecycle().value == GameMode.OFFLINE) && 
+                            (offlineSubMode == DurakViewModel.OfflineSubMode.TRANSFER)
+    val canPlayerTransferNow = isTransferEnabled && 
+            snapshot.tablePairs.isNotEmpty() && 
+            snapshot.tablePairs.all { it.defenseCard == null } &&
+            snapshot.attackerPlayerId == "opponent"
 
     var showLogs by remember { mutableStateOf(false) }
 
@@ -1280,7 +1374,7 @@ fun GameTableScreen(viewModel: DurakViewModel) {
                             contentAlignment = Alignment.Center
                         ) {
                             val trump = snapshot.trumpCard
-                            if (trump != null) {
+                            if (trump != null && snapshot.deckSize > 0) {
                                 // 1. Trump card horizontal bottom base
                                 CardComponent(
                                     card = trump,
@@ -1305,7 +1399,7 @@ fun GameTableScreen(viewModel: DurakViewModel) {
                                 CardBackComponent(
                                     modifier = Modifier
                                         .size(56.dp, 80.dp)
-                                )
+                                    )
                             }
                         }
 
@@ -1326,26 +1420,92 @@ fun GameTableScreen(viewModel: DurakViewModel) {
                         }
                     }
 
-                    // Discard size
-                    Row(
-                        modifier = Modifier
-                            .background(Color.White.copy(alpha = 0.05f), RoundedCornerShape(12.dp))
-                            .padding(horizontal = 10.dp, vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                    // Transfer Area if player can transfer
+                    if (canPlayerTransferNow) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier.padding(horizontal = 4.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(62.dp, 88.dp)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .border(
+                                        width = 1.5.dp,
+                                        brush = Brush.linearGradient(listOf(Color(0xFFFF5D5D), Color(0xFFFF3333))),
+                                        shape = RoundedCornerShape(12.dp)
+                                    )
+                                    .background(Color(0xFF3B1A1E)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Icon(
+                                        imageVector = Icons.Default.Refresh,
+                                        contentDescription = "Transfer Zone",
+                                        tint = Color(0xFFFF8282),
+                                        modifier = Modifier.size(22.dp)
+                                    )
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(
+                                        text = if (appLanguage == AppLanguage.RU) "ПАС / ПЕРЕВОД" else "TRANSFER ZONE",
+                                        color = Color(0xFFFFB4B4),
+                                        fontSize = 7.sp,
+                                        fontWeight = FontWeight.Black,
+                                        textAlign = TextAlign.Center,
+                                        modifier = Modifier.padding(horizontal = 2.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // Discard size & Relocated Battle Logs under Out Box
+                    Column(
+                        horizontalAlignment = Alignment.End,
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        Icon(
-                            Icons.Default.Delete,
-                            contentDescription = "Bito Pile",
-                            tint = Color.White.copy(alpha = 0.4f),
-                            modifier = Modifier.size(14.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = "Out: ${snapshot.discardPileSize}",
-                            color = Color.White.copy(alpha = 0.6f),
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold
-                        )
+                        Row(
+                            modifier = Modifier
+                                .background(Color.White.copy(alpha = 0.05f), RoundedCornerShape(12.dp))
+                                .padding(horizontal = 10.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                Icons.Default.Delete,
+                                contentDescription = "Bito Pile",
+                                tint = Color.White.copy(alpha = 0.4f),
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = "Out: ${snapshot.discardPileSize}",
+                                color = Color.White.copy(alpha = 0.6f),
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+
+                        Row(
+                            modifier = Modifier
+                                .background(Color.Black.copy(alpha = 0.45f), RoundedCornerShape(12.dp))
+                                .clickable { showLogs = !showLogs }
+                                .padding(horizontal = 10.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Info,
+                                contentDescription = "Logs",
+                                tint = Color.White.copy(alpha = 0.6f),
+                                modifier = Modifier.size(12.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = viewModel.getString("GAME_LOGS"),
+                                color = Color.White.copy(alpha = 0.8f),
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
                 }
             }
@@ -1378,22 +1538,54 @@ fun GameTableScreen(viewModel: DurakViewModel) {
                     modifier = Modifier.padding(bottom = 12.dp)
                 )
 
-                // 5. PLAYER CARDS HAND: Horizontal swipeable deck inside footer
+                // 5. PLAYER CARDS HAND: Horizontal swipeable deck inside footer with real physics drag and drop
                 LazyRow(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(118.dp),
+                        .height(124.dp),
                     horizontalArrangement = Arrangement.spacedBy((-16).dp), // beautiful card overlay fan
                     contentPadding = PaddingValues(horizontal = 16.dp)
                 ) {
-                    items(snapshot.localHand) { card ->
+                    items(snapshot.localHand, key = { it.id }) { card ->
+                        var offsetX by remember { mutableStateOf(0f) }
+                        var offsetY by remember { mutableStateOf(0f) }
+                        val animatedOffsetX by animateFloatAsState(targetValue = offsetX)
+                        val animatedOffsetY by animateFloatAsState(targetValue = offsetY)
+
                         CardComponent(
                             card = card,
                             faceUp = true,
                             onClick = { viewModel.playCard(card) },
                             modifier = Modifier
                                 .size(74.dp, 110.dp)
+                                .offset { IntOffset(animatedOffsetX.roundToInt(), animatedOffsetY.roundToInt()) }
                                 .shadow(6.dp, RoundedCornerShape(12.dp))
+                                .pointerInput(card.id) {
+                                    detectDragGestures(
+                                        onDrag = { change, dragAmount ->
+                                            change.consume()
+                                            offsetX += dragAmount.x
+                                            offsetY += dragAmount.y
+                                        },
+                                        onDragEnd = {
+                                            if (offsetY < -130f) {
+                                                if (canPlayerTransferNow && offsetX < -50f) {
+                                                    // Dragged towards the red Transfer Drop Zone specifically
+                                                    viewModel.playCard(card, intentTransferOnly = true)
+                                                } else {
+                                                    // Normal play throw
+                                                    viewModel.playCard(card)
+                                                }
+                                            }
+                                            offsetX = 0f
+                                            offsetY = 0f
+                                        },
+                                        onDragCancel = {
+                                            offsetX = 0f
+                                            offsetY = 0f
+                                        }
+                                    )
+                                }
                         )
                     }
                 }
@@ -1450,35 +1642,6 @@ fun GameTableScreen(viewModel: DurakViewModel) {
             }
         }
 
-        // --- BATTLE HISTORY LOG SHEET ---
-        Box(
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .padding(top = 56.dp)
-        ) {
-            Row(
-                modifier = Modifier
-                    .background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(20.dp))
-                    .clickable { showLogs = !showLogs }
-                    .padding(vertical = 6.dp, horizontal = 12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = viewModel.getString("GAME_LOGS"),
-                    color = Color.White,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold
-                )
-                Spacer(modifier = Modifier.width(4.dp))
-                Icon(
-                    imageVector = if (showLogs) Icons.Default.ArrowBack else Icons.Default.Info, // custom mapping helper
-                    contentDescription = null,
-                    tint = Color.White,
-                    modifier = Modifier.size(12.dp)
-                )
-            }
-        }
-
         if (showLogs) {
             Card(
                 colors = CardDefaults.cardColors(containerColor = Color(0xF2121513)),
@@ -1498,8 +1661,9 @@ fun GameTableScreen(viewModel: DurakViewModel) {
                         modifier = Modifier.padding(bottom = 8.dp)
                     )
 
+                    val gameLogsToDraw = if (appLanguage == AppLanguage.RU) snapshot.gameLogRu else snapshot.gameLogEn
                     LazyColumn(modifier = Modifier.weight(1f)) {
-                        items(snapshot.gameLog.reversed()) { logText ->
+                        items(gameLogsToDraw.reversed()) { logText ->
                             Text(
                                 text = "• $logText",
                                 color = Color.White.copy(alpha = 0.8f),

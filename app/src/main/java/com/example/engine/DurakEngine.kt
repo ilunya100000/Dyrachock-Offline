@@ -276,6 +276,10 @@ class DurakEngine {
         val matchesRank = tablePairs.any { it.attackCard.rank == card.rank }
         if (!matchesRank) return false
 
+        // Standard Transfer Limit constraint: Recipient must have enough cards to defend
+        val recipientHand = if (playerId == "player") opponentHand else playerHand
+        if (recipientHand.size < tablePairs.size + 1) return false
+
         hand.remove(card)
         tablePairs.add(CardPair(attackCard = card))
 

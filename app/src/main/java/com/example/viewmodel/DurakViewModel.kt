@@ -19,7 +19,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-enum class AppLanguage { EN, RU }
+enum class AppLanguage { EN, RU, IT }
 
 class DurakViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -57,6 +57,8 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
     // Rendered game state
     private val _gameState = MutableStateFlow<GameStateSnapshot>(GameStateSnapshot())
     val gameState = _gameState.asStateFlow()
+
+    private var hasPersistedThisGame = false
 
     // Multiplayer properties
     val networkState = multiplayerManager.connectionState
@@ -165,7 +167,7 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
         "STATUS_TITLE_LABEL" to "Animation Update",
         "CHANGELOG_BTN" to "Changelog",
         "CHANGELOG_TITLE" to "Version Changelog",
-        "CHANGELOG_TEXT" to "Version 0.1 (Animation Update)\n\n• Visualized deck cards dynamically with 3D overlapping layers.\n• Refactored the main menu to resolve overlapping texts on mobile screens.\n• Visualized bilingual, localized, step-by-step match logs directly in the archives section.\n• Integrated buttery-smooth spring physics animations for all card transactions.\n• Implemented the tactical Translational Durak (Переводной) mode offline against a bot.\n• Enabled taking back your own undefended attacking cards in multiplayer matches.\n• Cleared redundant development tags from the application view forever."
+        "CHANGELOG_TEXT" to "Version 0.1.1 (Patch Update)\n\n• Added planet globe language switcher inside the main menu with a choice confirmation dialog.\n• Started Italian language support (Changelog translated into Italian).\n• Visualized deck auto-disappearance upon depletion and animated last drawn cards smoothly into hands.\n• Fixed match archives logging: bilingual logging implemented, and correctly persisted to local Room DB.\n• Implemented drag-and-drop card interaction with physics and spring snap behaviors on play.\n• Introduced custom transfer drop zones in passing mode to choose between defending or transferring.\n• Fixed battle log overlapping on opponent hands by moving the pane below the Out pocket.\n• Adjusted opponent cards size from chip look to standard playing cards.\n• Fixed Translational Durak hand limits: transfers are forbidden if recipient has fewer cards than what would end up on the table."
     )
 
     private val ruTranslations = mapOf(
@@ -210,20 +212,34 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
         "STATUS_TITLE_LABEL" to "Анимационное обновление",
         "CHANGELOG_BTN" to "Изменения",
         "CHANGELOG_TITLE" to "История изменений",
-        "CHANGELOG_TEXT" to "Версия 0.1 (Анимационное обновление)\n\n• Добавлена 3D визуализация стопки колоды карт на игровом столе.\n• Устранены перекрытия элементов текста на экранах мобильных устройств.\n• Реализована детальная двуязычная выгрузка логов ходов прямо в окне архива.\n• Интегрированы плавные переходы раздачи и подкидываний на базе физики упругих пружин.\n• Разработан тактический режим «Переводной дурак» для одиночных матчей против бота.\n• Добавлен отзыв собственных непокрытых карт назад в руку во время мультиплеера.\n• Полностью очищены лишние служебные метки разработчиков."
+        "CHANGELOG_TEXT" to "Версия 0.1.1 (Патч)\n\n• Добавлена кнопка переключения языков \"Глобус\" в главном меню с окном подтверждения выбора.\n• Начата разработка итальянского языка (пока переведена только история изменений).\n• Визуализировано исчезновение колоды при опустошении и анимация раздачи последней карты.\n• Исправлено сохранение логов: двуязычные логи битвы теперь корректно записываются в Архив локальной базы Room.\n• Реализовано перетаскивание карт (drag-and-drop) на стол с упругой физикой возврата.\n• Добавлена выделенная зона перевода в режиме «Переводной дурак» для выбора между защитой и пасом.\n• Исправлено перекрытие логов ложа карт: кнопка перенесена вниз под зону «Бито/Пас».\n• Увеличены размеры карт противника со стилизованных фишек до полноценных игровых карт.\n• Исправлен переводной дурак: перевод заблокирован, если у получателя карт меньше, чем окажется на столе."
+    )
+
+    private val itTranslations = mapOf(
+        "CHANGELOG_BTN" to "Registro",
+        "CHANGELOG_TITLE" to "Registro Modifiche (Beta)",
+        "CHANGELOG_TEXT" to "Versione 0.1.1 (Beta)\n\n• Aggiunta l'icona del globo per il selettore di lingua nel menu principale con conferma.\n• Avviato il supporto alla lingua italiana (per ora tradotto solo il changelog).\n• Visualizzata la scomparsa del mazzo quando vuoto; animato il passaggio dell'ultima carta.\n• Corretto e salvato il registro delle battaglie bilingue negli archivi locali tramite Room.\n• Implementato il drag-and-drop per lanciare le carte sul tavolo con fisica a molla reattiva.\n• Introdotta un'area di rilascio specifica per decidere se difendere o passare in modalità \"Passatore\".\n• Spostato il pannello del registro delle battaglie sotto la tasca \"Fuori\" (Out) per evitare sovrapposizioni.\n• Modificato l'aspetto delle carte dell'avversario da piccole fiches a carte standard.\n• Risolta la regola del passaggio: impossibilitato a passare se l'avversario ha meno carte di quante finirebbero sul tavolo."
     )
 
     fun getString(key: String): String {
-        return if (_appLanguage.value == AppLanguage.RU) {
-            ruTranslations[key] ?: key
-        } else {
-            enTranslations[key] ?: key
+        return when (_appLanguage.value) {
+            AppLanguage.RU -> ruTranslations[key] ?: key
+            AppLanguage.IT -> itTranslations[key] ?: enTranslations[key] ?: key
+            else -> enTranslations[key] ?: key
         }
     }
 
     // Settings actions
+    fun setLanguage(lang: AppLanguage) {
+        _appLanguage.value = lang
+    }
+
     fun toggleLanguage() {
-        _appLanguage.value = if (_appLanguage.value == AppLanguage.EN) AppLanguage.RU else AppLanguage.EN
+        _appLanguage.value = when (_appLanguage.value) {
+            AppLanguage.EN -> AppLanguage.RU
+            AppLanguage.RU -> AppLanguage.IT
+            AppLanguage.IT -> AppLanguage.EN
+        }
     }
 
     fun setDifficulty(hard: Boolean) {
@@ -243,6 +259,7 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
     // Starts offline bot match
     fun startOfflineMatch() {
         _activeMode.value = GameMode.OFFLINE
+        hasPersistedThisGame = false
         val transferEnabled = (_offlineSubMode.value == OfflineSubMode.TRANSFER)
         engine.startMatch("Player", "Bot", isBotGame = true, deckSize = 36, isTransferMode = transferEnabled)
         _gameState.value = engine.createSnapshot().copy(opponentName = "Bot")
@@ -253,6 +270,7 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
     // Starts multiplayer matchmaking: Creates a Host room
     fun startHostingLobby() {
         _activeMode.value = GameMode.ONLINE_HOST
+        hasPersistedThisGame = false
         multiplayerManager.startHost()
         _currentScreen.value = Screen.MULTIPLAYER_HUB
         
@@ -262,6 +280,7 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
                 if (netState == MultiplayerManager.State.CONNECTED && _activeMode.value == GameMode.ONLINE_HOST) {
                     // Initialize game and send immediately
                     delay(300) // gentle networking stabilization delay
+                    hasPersistedThisGame = false
                     engine.startMatch("Host", "Guest", isBotGame = false, deckSize = _mpLobbyDeckSize.value)
                     pushHostStateToClient()
                     _currentScreen.value = Screen.GAME_TABLE
@@ -293,7 +312,7 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
     // --- PLAYER ACTION ROUTERS ---
 
     // Handles physical card play action
-    fun playCard(card: Card) {
+    fun playCard(card: Card, forceDefenseOnly: Boolean = false, intentTransferOnly: Boolean = false) {
         val snapshot = _gameState.value
         if (snapshot.matchStatus != MatchStatus.PLAYING) return
 
@@ -301,9 +320,11 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
             // Check if user is Attacking
             val isUserAttacking = (engine.attackerId == "player")
             if (isUserAttacking) {
-                if (engine.performAttack("player", card)) {
-                    refreshLocalState()
-                    triggerBotRoutineIfNeeded()
+                if (!intentTransferOnly) {
+                    if (engine.performAttack("player", card)) {
+                        refreshLocalState()
+                        triggerBotRoutineIfNeeded()
+                    }
                 }
             } else {
                 // User is Defending.
@@ -312,12 +333,12 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
                         engine.tablePairs.all { it.defenseCard == null } &&
                         engine.tablePairs.any { it.attackCard.rank == card.rank }
 
-                if (canTransfer) {
+                if (canTransfer && intentTransferOnly) {
                     if (engine.performTransfer("player", card)) {
                         refreshLocalState()
                         triggerBotRoutineIfNeeded()
                     }
-                } else {
+                } else if (!intentTransferOnly) {
                     // Highlight or auto-match with the first undefended card on Table
                     val undefendedPair = engine.tablePairs.find { it.defenseCard == null }
                     if (undefendedPair != null) {
@@ -451,6 +472,9 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun checkAndPersistRoomResult(snapshot: GameStateSnapshot) {
         if (snapshot.matchStatus == MatchStatus.WON || snapshot.matchStatus == MatchStatus.LOST || snapshot.matchStatus == MatchStatus.DRAW) {
+            if (hasPersistedThisGame) return
+            hasPersistedThisGame = true
+            
             // Write to Room once safely
             viewModelScope.launch(Dispatchers.IO) {
                 val modeLabel = if (_activeMode.value == GameMode.OFFLINE) "OFFLINE" else "ONLINE"
@@ -460,7 +484,9 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
                     GameStat(
                         mode = modeLabel,
                         result = resultLabel,
-                        opponentName = oppLabel
+                        opponentName = oppLabel,
+                        matchLogEn = snapshot.gameLogEn.joinToString("\n"),
+                        matchLogRu = snapshot.gameLogRu.joinToString("\n")
                     )
                 )
             }
@@ -558,6 +584,8 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
                     matchStatus = statePayload.matchStatus,
                     attackerPlayerId = statePayload.attackerId,
                     gameLog = statePayload.gameLog,
+                    gameLogEn = statePayload.gameLogEn,
+                    gameLogRu = statePayload.gameLogRu,
                     canTake = !isClientAttacking && statePayload.tablePairs.isNotEmpty() && statePayload.tablePairs.any { it.defenseCard == null },
                     canBito = isClientAttacking && statePayload.tablePairs.isNotEmpty() && statePayload.tablePairs.all { it.defenseCard != null }
                 )

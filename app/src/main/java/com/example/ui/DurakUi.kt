@@ -25,6 +25,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
@@ -326,7 +327,7 @@ fun MainMenuScreen(viewModel: DurakViewModel, statsList: List<GameStat>) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "0.1.1",
+                    text = "0.1.1_01",
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f)
@@ -1279,78 +1280,128 @@ fun GameTableScreen(viewModel: DurakViewModel) {
                             )
                         }
                     } else {
-                        // Display table active card pairs (chunked beautifully into rows of up to 3 pairs to wrap neatly)
-                        val chunkedPairs = snapshot.tablePairs.chunked(3)
-                        Column(
+                        Row(
                             modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(12.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
+                                .fillMaxSize()
+                                .padding(8.dp),
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            for (rowPairs in chunkedPairs) {
-                                Row(
-                                    horizontalArrangement = Arrangement.Center,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    for (pair in rowPairs) {
-                                        Box(
-                                            modifier = Modifier
-                                                .size(92.dp, 124.dp)
-                                                .padding(horizontal = 4.dp)
-                                        ) {
-                                            // Underneath card (The attacking card)
-                                            CardComponent(
-                                                card = pair.attackCard,
-                                                faceUp = true,
-                                                onClick = {
-                                                    val isMp = (viewModel.activeMode.value == com.example.model.GameMode.ONLINE_HOST || viewModel.activeMode.value == com.example.model.GameMode.ONLINE_CLIENT)
-                                                    if (isMp && pair.defenseCard == null) {
-                                                        viewModel.takeBackCard(pair.attackCard)
-                                                    } else {
-                                                        viewModel.playCard(pair.attackCard)
-                                                    }
-                                                },
+                            // Left/Center: Display table active card pairs (chunked beautifully into rows of up to 3 pairs to wrap neatly)
+                            val chunkedPairs = snapshot.tablePairs.chunked(3)
+                            Column(
+                                modifier = Modifier.weight(1f),
+                                verticalArrangement = Arrangement.spacedBy(8.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                for (rowPairs in chunkedPairs) {
+                                    Row(
+                                        horizontalArrangement = Arrangement.Center,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        for (pair in rowPairs) {
+                                            Box(
                                                 modifier = Modifier
-                                                    .align(Alignment.TopStart)
-                                                    .size(70.dp, 102.dp)
-                                            )
-
-                                            // Overlap card (The defensive card, if beat)
-                                            if (pair.defenseCard != null) {
+                                                    .size(92.dp, 124.dp)
+                                                    .padding(horizontal = 4.dp)
+                                            ) {
+                                                // Underneath card (The attacking card)
                                                 CardComponent(
-                                                    card = pair.defenseCard,
+                                                    card = pair.attackCard,
                                                     faceUp = true,
-                                                    onClick = {},
+                                                    onClick = {
+                                                        val isMp = (viewModel.activeMode.value == com.example.model.GameMode.ONLINE_HOST || viewModel.activeMode.value == com.example.model.GameMode.ONLINE_CLIENT)
+                                                        if (isMp && pair.defenseCard == null) {
+                                                            viewModel.takeBackCard(pair.attackCard)
+                                                        } else {
+                                                            viewModel.playCard(pair.attackCard)
+                                                        }
+                                                    },
                                                     modifier = Modifier
-                                                        .align(Alignment.BottomEnd)
+                                                        .align(Alignment.TopStart)
                                                         .size(70.dp, 102.dp)
-                                                        .shadow(6.dp, RoundedCornerShape(12.dp))
                                                 )
-                                            } else {
-                                                // Visual highlight helper pointing that card needs matching defense
-                                                Box(
-                                                    modifier = Modifier
-                                                        .align(Alignment.BottomEnd)
-                                                        .size(70.dp, 102.dp)
-                                                        .clip(RoundedCornerShape(12.dp))
-                                                        .border(
-                                                            1.5.dp,
-                                                            Brush.linearGradient(listOf(Color(0xFFD1E4FF).copy(alpha = 0.4f), Color.Transparent)),
-                                                            RoundedCornerShape(12.dp)
-                                                        )
-                                                        .background(Color.White.copy(alpha = 0.03f)),
-                                                    contentAlignment = Alignment.Center
-                                                ) {
-                                                    Text(
-                                                        text = if (appLanguage == AppLanguage.RU) "БЕЙ" else "DEFEND",
-                                                        color = Color.White.copy(alpha = 0.35f),
-                                                        fontWeight = FontWeight.Black,
-                                                        fontSize = 9.sp,
-                                                        letterSpacing = 0.5.sp
+
+                                                // Overlap card (The defensive card, if beat)
+                                                if (pair.defenseCard != null) {
+                                                    CardComponent(
+                                                        card = pair.defenseCard,
+                                                        faceUp = true,
+                                                        onClick = {},
+                                                        modifier = Modifier
+                                                            .align(Alignment.BottomEnd)
+                                                            .size(70.dp, 102.dp)
+                                                            .shadow(6.dp, RoundedCornerShape(12.dp))
                                                     )
+                                                } else {
+                                                    // Visual highlight helper pointing that card needs matching defense
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .align(Alignment.BottomEnd)
+                                                            .size(70.dp, 102.dp)
+                                                            .clip(RoundedCornerShape(12.dp))
+                                                            .border(
+                                                                1.5.dp,
+                                                                Brush.linearGradient(listOf(Color(0xFFD1E4FF).copy(alpha = 0.4f), Color.Transparent)),
+                                                                RoundedCornerShape(12.dp)
+                                                            )
+                                                            .background(Color.White.copy(alpha = 0.03f)),
+                                                        contentAlignment = Alignment.Center
+                                                    ) {
+                                                        Text(
+                                                            text = if (appLanguage == AppLanguage.RU) "БЕЙ" else "DEFEND",
+                                                            color = Color.White.copy(alpha = 0.35f),
+                                                            fontWeight = FontWeight.Black,
+                                                            fontSize = 9.sp,
+                                                            letterSpacing = 0.5.sp
+                                                        )
+                                                    }
                                                 }
                                             }
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Right corner: Glowing Crimson Transfer Drop Zone directly beside table cards
+                            if (canPlayerTransferNow) {
+                                Column(
+                                    modifier = Modifier
+                                        .padding(start = 8.dp, end = 12.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.Center
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(76.dp, 108.dp)
+                                            .clip(RoundedCornerShape(14.dp))
+                                            .background(Color(0xFF3B1A1E))
+                                            .border(
+                                                width = 1.5.dp,
+                                                brush = Brush.linearGradient(listOf(Color(0xFFFF5D5D), Color(0xFFFF3333))),
+                                                shape = RoundedCornerShape(14.dp)
+                                            ),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Column(
+                                            horizontalAlignment = Alignment.CenterHorizontally,
+                                            modifier = Modifier.padding(4.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.SwapHoriz,
+                                                contentDescription = "Transfer Zone",
+                                                tint = Color(0xFFFF8282),
+                                                modifier = Modifier.size(24.dp)
+                                            )
+                                            Spacer(modifier = Modifier.height(4.dp))
+                                            Text(
+                                                text = if (appLanguage == AppLanguage.RU) "ПАС /\nПЕРЕВОД" else "TRANSFER\nZONE",
+                                                color = Color(0xFFFFB4B4),
+                                                fontSize = 9.sp,
+                                                fontWeight = FontWeight.Black,
+                                                textAlign = TextAlign.Center,
+                                                lineHeight = 11.sp
+                                            )
                                         }
                                     }
                                 }
@@ -1420,45 +1471,6 @@ fun GameTableScreen(viewModel: DurakViewModel) {
                         }
                     }
 
-                    // Transfer Area if player can transfer
-                    if (canPlayerTransferNow) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier = Modifier.padding(horizontal = 4.dp)
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(62.dp, 88.dp)
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .border(
-                                        width = 1.5.dp,
-                                        brush = Brush.linearGradient(listOf(Color(0xFFFF5D5D), Color(0xFFFF3333))),
-                                        shape = RoundedCornerShape(12.dp)
-                                    )
-                                    .background(Color(0xFF3B1A1E)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Icon(
-                                        imageVector = Icons.Default.Refresh,
-                                        contentDescription = "Transfer Zone",
-                                        tint = Color(0xFFFF8282),
-                                        modifier = Modifier.size(22.dp)
-                                    )
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                    Text(
-                                        text = if (appLanguage == AppLanguage.RU) "ПАС / ПЕРЕВОД" else "TRANSFER ZONE",
-                                        color = Color(0xFFFFB4B4),
-                                        fontSize = 7.sp,
-                                        fontWeight = FontWeight.Black,
-                                        textAlign = TextAlign.Center,
-                                        modifier = Modifier.padding(horizontal = 2.dp)
-                                    )
-                                }
-                            }
-                        }
-                    }
-
                     // Discard size & Relocated Battle Logs under Out Box
                     Column(
                         horizontalAlignment = Alignment.End,
@@ -1514,8 +1526,7 @@ fun GameTableScreen(viewModel: DurakViewModel) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp))
-                    .background(Color(0xFF1A1C1E))
+                    .background(Color(0xFF1A1C1E), RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp))
                     .border(
                         1.dp,
                         Color.White.copy(alpha = 0.06f),
@@ -1538,6 +1549,16 @@ fun GameTableScreen(viewModel: DurakViewModel) {
                     modifier = Modifier.padding(bottom = 12.dp)
                 )
 
+                val sortedHand = remember(snapshot.localHand, snapshot.trumpSuit) {
+                    val (trumps, nonTrumps) = snapshot.localHand.partition { it.suit == snapshot.trumpSuit }
+                    val sortedNonTrumps = nonTrumps.sortedWith(
+                        compareBy<Card> { it.suit.ordinal }
+                            .thenBy { it.rank.value }
+                    )
+                    val sortedTrumps = trumps.sortedBy { it.rank.value }
+                    sortedNonTrumps + sortedTrumps
+                }
+
                 // 5. PLAYER CARDS HAND: Horizontal swipeable deck inside footer with real physics drag and drop
                 LazyRow(
                     modifier = Modifier
@@ -1546,18 +1567,25 @@ fun GameTableScreen(viewModel: DurakViewModel) {
                     horizontalArrangement = Arrangement.spacedBy((-16).dp), // beautiful card overlay fan
                     contentPadding = PaddingValues(horizontal = 16.dp)
                 ) {
-                    items(snapshot.localHand, key = { it.id }) { card ->
+                    items(sortedHand, key = { it.id }) { card ->
                         var offsetX by remember { mutableStateOf(0f) }
                         var offsetY by remember { mutableStateOf(0f) }
-                        val animatedOffsetX by animateFloatAsState(targetValue = offsetX)
-                        val animatedOffsetY by animateFloatAsState(targetValue = offsetY)
+                        val animatedOffsetX by animateFloatAsState(
+                            targetValue = offsetX,
+                            animationSpec = spring(stiffness = Spring.StiffnessHigh)
+                        )
+                        val animatedOffsetY by animateFloatAsState(
+                            targetValue = offsetY,
+                            animationSpec = spring(stiffness = Spring.StiffnessHigh)
+                        )
 
                         CardComponent(
                             card = card,
                             faceUp = true,
-                            onClick = { viewModel.playCard(card) },
+                            onClick = null, // Disable tap-to-play card from hand completely
                             modifier = Modifier
                                 .size(74.dp, 110.dp)
+                                .zIndex(if (offsetX != 0f || offsetY != 0f) 999f else 1f)
                                 .offset { IntOffset(animatedOffsetX.roundToInt(), animatedOffsetY.roundToInt()) }
                                 .shadow(6.dp, RoundedCornerShape(12.dp))
                                 .pointerInput(card.id) {
@@ -1569,8 +1597,8 @@ fun GameTableScreen(viewModel: DurakViewModel) {
                                         },
                                         onDragEnd = {
                                             if (offsetY < -130f) {
-                                                if (canPlayerTransferNow && offsetX < -50f) {
-                                                    // Dragged towards the red Transfer Drop Zone specifically
+                                                if (canPlayerTransferNow && offsetX > 30f) {
+                                                    // Dragged towards the red Transfer Drop Zone specifically on the right
                                                     viewModel.playCard(card, intentTransferOnly = true)
                                                 } else {
                                                     // Normal play throw
@@ -1783,7 +1811,7 @@ fun GameTableScreen(viewModel: DurakViewModel) {
 fun CardComponent(
     card: Card,
     faceUp: Boolean,
-    onClick: () -> Unit,
+    onClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     var animTriggered by remember { mutableStateOf(false) }
@@ -1794,8 +1822,8 @@ fun CardComponent(
     val scale by androidx.compose.animation.core.animateFloatAsState(
         targetValue = if (animTriggered) 1f else 0.5f,
         animationSpec = androidx.compose.animation.core.spring(
-            dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
-            stiffness = androidx.compose.animation.core.Spring.StiffnessMedium
+            dampingRatio = androidx.compose.animation.core.Spring.DampingRatioNoBouncy,
+            stiffness = androidx.compose.animation.core.Spring.StiffnessHigh
         ),
         label = "CardScale"
     )
@@ -1803,8 +1831,8 @@ fun CardComponent(
     val translationY by androidx.compose.animation.core.animateFloatAsState(
         targetValue = if (animTriggered) 0f else 60f,
         animationSpec = androidx.compose.animation.core.spring(
-            dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
-            stiffness = androidx.compose.animation.core.Spring.StiffnessLow
+            dampingRatio = androidx.compose.animation.core.Spring.DampingRatioNoBouncy,
+            stiffness = androidx.compose.animation.core.Spring.StiffnessHigh
         ),
         label = "CardTranslationY"
     )
@@ -1817,7 +1845,7 @@ fun CardComponent(
                     scaleY = scale,
                     translationY = translationY
                 )
-                .clickable { onClick() }
+                .let { if (onClick != null) it.clickable { onClick() } else it }
         )
         return
     }
@@ -1832,7 +1860,7 @@ fun CardComponent(
             .shadow(4.dp, RoundedCornerShape(14.dp))
             .clip(RoundedCornerShape(14.dp))
             .background(Color.White)
-            .clickable { onClick() }
+            .let { if (onClick != null) it.clickable { onClick() } else it }
             .border(1.dp, Color.Black.copy(alpha = 0.08f), RoundedCornerShape(14.dp))
             .padding(8.dp)
     ) {

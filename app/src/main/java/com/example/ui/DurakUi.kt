@@ -8,6 +8,8 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.IntOffset
@@ -56,6 +58,11 @@ import com.example.viewmodel.AppLanguage
 import com.example.viewmodel.DurakViewModel
 import java.text.SimpleDateFormat
 import java.util.*
+
+sealed interface TableFlowItem {
+    data class PairItem(val pair: CardPair) : TableFlowItem
+    object TransferItem : TableFlowItem
+}
 
 @OptIn(ExperimentalAnimationApi::class)
 @Composable
@@ -345,7 +352,7 @@ fun MainMenuScreen(viewModel: DurakViewModel, statsList: List<GameStat>) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "0.1.2",
+                    text = "0.1.2_01",
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f)
@@ -429,16 +436,29 @@ fun MainMenuScreen(viewModel: DurakViewModel, statsList: List<GameStat>) {
                                 val milestones = listOf(
                                     Triple(
                                         when (appLanguage) {
-                                            AppLanguage.RU -> "Май"
-                                            AppLanguage.IT -> "Maggio"
-                                            else -> "May"
+                                            AppLanguage.RU -> "Май (0.1.x)"
+                                            AppLanguage.IT -> "Maggio (0.1.x)"
+                                            else -> "May (0.1.x)"
                                         },
                                         when (appLanguage) {
-                                            AppLanguage.RU -> "Добавление базовых функций(0.2, 0.3, 0.4)"
-                                            AppLanguage.IT -> "Aggiunta di funzioni di base(0.2, 0.3, 0.4)"
-                                            else -> "Adding base features(0.2, 0.3, 0.4)"
+                                            AppLanguage.RU -> "Конструктор колоды и оптимизации интерфейса"
+                                            AppLanguage.IT -> "Costruttore di mazzi e ottimizzazione dell'interfaccia"
+                                            else -> "Custom deck builder & interface optimizations"
                                         },
                                         Icons.Default.Build
+                                    ),
+                                    Triple(
+                                        when (appLanguage) {
+                                            AppLanguage.RU -> "0.2 - Музыкальное обновление"
+                                            AppLanguage.IT -> "0.2 - Aggiornamento audio"
+                                            else -> "0.2 - Sound Update"
+                                        },
+                                        when (appLanguage) {
+                                            AppLanguage.RU -> "Релиз режима Переводной дурак, Добавление Переводного дурака в Мультиплеер, добавление в игру музыки и звуков, Полноценный выход Итальянского языка, начало Бета тестирования Украинского языка"
+                                            AppLanguage.IT -> "Rilascio della modalità Durak del Trasferimento, aggiunta del Durak del Trasferimento al Multiplayer, integrazione di musica ed effetti sonori, rilascio completo della localizzazione italiana e inizio del beta testing ucraino."
+                                            else -> "Release of Transfer Durak mode, addition of Transfer Durak to Multiplayer, integration of music and sound effects, full release of the Italian localization, and start of Ukrainian beta testing."
+                                        },
+                                        Icons.Default.VolumeUp
                                     ),
                                     Triple(
                                         when (appLanguage) {
@@ -1561,6 +1581,17 @@ fun GameTableScreen(viewModel: DurakViewModel) {
                             )
                         }
                     } else {
+                        val tableLayoutItems = remember(snapshot.tablePairs, canPlayerTransferNow) {
+                            val items = mutableListOf<TableFlowItem>()
+                            snapshot.tablePairs.forEach { items.add(TableFlowItem.PairItem(it)) }
+                            if (canPlayerTransferNow) {
+                                items.add(TableFlowItem.TransferItem)
+                            }
+                            items
+                        }
+
+                        val chunkedRows = tableLayoutItems.chunked(3)
+
                         Row(
                             modifier = Modifier
                                 .fillMaxSize()
@@ -1568,134 +1599,135 @@ fun GameTableScreen(viewModel: DurakViewModel) {
                             horizontalArrangement = Arrangement.Center,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            // Left/Center: Display table active card pairs (chunked beautifully into rows of up to 3 pairs to wrap neatly)
-                            val chunkedPairs = snapshot.tablePairs.chunked(3)
                             Column(
                                 modifier = Modifier.weight(1f),
                                 verticalArrangement = Arrangement.spacedBy(8.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
-                                for (rowPairs in chunkedPairs) {
+                                for (rowItems in chunkedRows) {
                                     Row(
                                         horizontalArrangement = Arrangement.Center,
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        for (pair in rowPairs) {
-                                            Box(
-                                                modifier = Modifier
-                                                    .size(92.dp, 124.dp)
-                                                    .padding(horizontal = 4.dp)
-                                            ) {
-                                                // Underneath card (The attacking card)
-                                                CardComponent(
-                                                    card = pair.attackCard,
-                                                    faceUp = true,
-                                                    onClick = {
-                                                        val isMp = (viewModel.activeMode.value == com.example.model.GameMode.ONLINE_HOST || viewModel.activeMode.value == com.example.model.GameMode.ONLINE_CLIENT)
-                                                        if (isMp && pair.defenseCard == null) {
-                                                            viewModel.takeBackCard(pair.attackCard)
-                                                        } else {
-                                                            viewModel.playCard(pair.attackCard)
-                                                        }
-                                                    },
-                                                    modifier = Modifier
-                                                        .align(Alignment.TopStart)
-                                                        .size(70.dp, 102.dp)
-                                                )
-
-                                                // Overlap card (The defensive card, if beat)
-                                                if (pair.defenseCard != null) {
-                                                    CardComponent(
-                                                        card = pair.defenseCard,
-                                                        faceUp = true,
-                                                        onClick = {},
-                                                        modifier = Modifier
-                                                            .align(Alignment.BottomEnd)
-                                                            .size(70.dp, 102.dp)
-                                                            .shadow(6.dp, RoundedCornerShape(12.dp))
-                                                    )
-                                                } else {
-                                                    // Visual highlight helper pointing that card needs matching defense
+                                        for (item in rowItems) {
+                                            when (item) {
+                                                is TableFlowItem.PairItem -> {
+                                                    val pair = item.pair
                                                     Box(
                                                         modifier = Modifier
-                                                            .align(Alignment.BottomEnd)
-                                                            .size(70.dp, 102.dp)
-                                                            .clip(RoundedCornerShape(12.dp))
-                                                            .border(
-                                                                1.5.dp,
-                                                                Brush.linearGradient(listOf(Color(0xFFD1E4FF).copy(alpha = 0.4f), Color.Transparent)),
-                                                                RoundedCornerShape(12.dp)
+                                                            .size(92.dp, 124.dp)
+                                                            .padding(horizontal = 4.dp)
+                                                    ) {
+                                                        // Underneath card (The attacking card)
+                                                        CardComponent(
+                                                            card = pair.attackCard,
+                                                            faceUp = true,
+                                                            onClick = {
+                                                                val isMp = (viewModel.activeMode.value == com.example.model.GameMode.ONLINE_HOST || viewModel.activeMode.value == com.example.model.GameMode.ONLINE_CLIENT)
+                                                                if (isMp && pair.defenseCard == null) {
+                                                                    viewModel.takeBackCard(pair.attackCard)
+                                                                } else {
+                                                                    viewModel.playCard(pair.attackCard)
+                                                                }
+                                                            },
+                                                            modifier = Modifier
+                                                                .align(Alignment.TopStart)
+                                                                .size(70.dp, 102.dp)
+                                                        )
+
+                                                        // Overlap card (The defensive card, if beat)
+                                                        if (pair.defenseCard != null) {
+                                                            CardComponent(
+                                                                card = pair.defenseCard,
+                                                                faceUp = true,
+                                                                onClick = {},
+                                                                modifier = Modifier
+                                                                    .align(Alignment.BottomEnd)
+                                                                    .size(70.dp, 102.dp)
+                                                                    .shadow(6.dp, RoundedCornerShape(12.dp))
                                                             )
-                                                            .background(Color.White.copy(alpha = 0.03f)),
+                                                        } else {
+                                                            // Visual highlight helper pointing that card needs matching defense
+                                                            Box(
+                                                                modifier = Modifier
+                                                                    .align(Alignment.BottomEnd)
+                                                                    .size(70.dp, 102.dp)
+                                                                    .clip(RoundedCornerShape(12.dp))
+                                                                    .border(
+                                                                        1.5.dp,
+                                                                        Brush.linearGradient(listOf(Color(0xFFD1E4FF).copy(alpha = 0.4f), Color.Transparent)),
+                                                                        RoundedCornerShape(12.dp)
+                                                                    )
+                                                                    .background(Color.White.copy(alpha = 0.03f)),
+                                                                contentAlignment = Alignment.Center
+                                                            ) {
+                                                                Text(
+                                                                    text = if (appLanguage == AppLanguage.RU) "БЕЙ" else "DEFEND",
+                                                                    color = Color.White.copy(alpha = 0.35f),
+                                                                    fontWeight = FontWeight.Black,
+                                                                    fontSize = 9.sp,
+                                                                    letterSpacing = 0.5.sp
+                                                                )
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                                is TableFlowItem.TransferItem -> {
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .size(92.dp, 124.dp)
+                                                            .padding(horizontal = 4.dp),
                                                         contentAlignment = Alignment.Center
                                                     ) {
-                                                        Text(
-                                                            text = if (appLanguage == AppLanguage.RU) "БЕЙ" else "DEFEND",
-                                                            color = Color.White.copy(alpha = 0.35f),
-                                                            fontWeight = FontWeight.Black,
-                                                            fontSize = 9.sp,
-                                                            letterSpacing = 0.5.sp
-                                                        )
+                                                        Box(
+                                                            modifier = Modifier
+                                                                .size(76.dp, 108.dp)
+                                                                .clip(RoundedCornerShape(14.dp))
+                                                                .background(Color(0xFF3B1A1E))
+                                                                .border(
+                                                                    width = 1.5.dp,
+                                                                    brush = Brush.linearGradient(listOf(Color(0xFFFF5D5D), Color(0xFFFF3333))),
+                                                                    shape = RoundedCornerShape(14.dp)
+                                                                )
+                                                                .onGloballyPositioned { coordinates ->
+                                                                    rootLayoutCoordinates?.let { root ->
+                                                                        if (root.isAttached && coordinates.isAttached) {
+                                                                            val rootPos = root.localPositionOf(coordinates, Offset.Zero)
+                                                                            transferZoneBounds = Rect(
+                                                                                left = rootPos.x,
+                                                                                top = rootPos.y,
+                                                                                right = rootPos.x + coordinates.size.width,
+                                                                                bottom = rootPos.y + coordinates.size.height
+                                                                            )
+                                                                        }
+                                                                    }
+                                                                },
+                                                            contentAlignment = Alignment.Center
+                                                        ) {
+                                                            Column(
+                                                                horizontalAlignment = Alignment.CenterHorizontally,
+                                                                modifier = Modifier.padding(4.dp)
+                                                            ) {
+                                                                Icon(
+                                                                    imageVector = Icons.Default.SwapHoriz,
+                                                                    contentDescription = "Transfer Zone",
+                                                                    tint = Color(0xFFFF8282),
+                                                                    modifier = Modifier.size(24.dp)
+                                                                )
+                                                                Spacer(modifier = Modifier.height(4.dp))
+                                                                Text(
+                                                                    text = if (appLanguage == AppLanguage.RU) "ПАС /\nПЕРЕВОД" else if (appLanguage == AppLanguage.IT) "TRASFERISCI" else "TRANSFER\nZONE",
+                                                                    color = Color(0xFFFFB4B4),
+                                                                    fontSize = 9.sp,
+                                                                    fontWeight = FontWeight.Black,
+                                                                    textAlign = TextAlign.Center,
+                                                                    lineHeight = 11.sp
+                                                                )
+                                                            }
+                                                        }
                                                     }
                                                 }
                                             }
-                                        }
-                                    }
-                                }
-                            }
-
-                            // Right corner: Glowing Crimson Transfer Drop Zone directly beside table cards
-                            if (canPlayerTransferNow) {
-                                Column(
-                                    modifier = Modifier
-                                        .padding(start = 8.dp, end = 12.dp),
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    verticalArrangement = Arrangement.Center
-                                ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(76.dp, 108.dp)
-                                            .clip(RoundedCornerShape(14.dp))
-                                            .background(Color(0xFF3B1A1E))
-                                            .border(
-                                                width = 1.5.dp,
-                                                brush = Brush.linearGradient(listOf(Color(0xFFFF5D5D), Color(0xFFFF3333))),
-                                                shape = RoundedCornerShape(14.dp)
-                                            )
-                                            .onGloballyPositioned { coordinates ->
-                                                rootLayoutCoordinates?.let { root ->
-                                                    if (root.isAttached && coordinates.isAttached) {
-                                                        val rootPos = root.localPositionOf(coordinates, Offset.Zero)
-                                                        transferZoneBounds = Rect(
-                                                            left = rootPos.x,
-                                                            top = rootPos.y,
-                                                            right = rootPos.x + coordinates.size.width,
-                                                            bottom = rootPos.y + coordinates.size.height
-                                                        )
-                                                    }
-                                                }
-                                            },
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Column(
-                                            horizontalAlignment = Alignment.CenterHorizontally,
-                                            modifier = Modifier.padding(4.dp)
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Default.SwapHoriz,
-                                                contentDescription = "Transfer Zone",
-                                                tint = Color(0xFFFF8282),
-                                                modifier = Modifier.size(24.dp)
-                                            )
-                                            Spacer(modifier = Modifier.height(4.dp))
-                                            Text(
-                                                text = if (appLanguage == AppLanguage.RU) "ПАС /\nПЕРЕВОД" else "TRANSFER\nZONE",
-                                                color = Color(0xFFFFB4B4),
-                                                fontSize = 9.sp,
-                                                fontWeight = FontWeight.Black,
-                                                textAlign = TextAlign.Center,
-                                                lineHeight = 11.sp
-                                            )
                                         }
                                     }
                                 }
@@ -2117,66 +2149,7 @@ fun GameTableScreen(viewModel: DurakViewModel) {
             }
         }
 
-        if (canPlayerTransferNow && activeDraggedCard != null && snapshot.tablePairs.any { it.attackCard.rank == activeDraggedCard!!.rank }) {
-            Box(
-                modifier = Modifier
-                    .align(Alignment.Center)
-                    .size(190.dp, 240.dp)
-                    .zIndex(600f) // HIGH ABOVE TABLE & BUTTONS
-                    .clip(RoundedCornerShape(24.dp))
-                    .background(Color(0xE62A0D10)) // Semitransparent dark crimson
-                    .border(
-                        width = 2.dp,
-                        brush = Brush.linearGradient(
-                            listOf(Color(0xFFFF5D5D), Color(0xFFFF1111))
-                        ),
-                        shape = RoundedCornerShape(24.dp)
-                    )
-                    .onGloballyPositioned { coordinates ->
-                        rootLayoutCoordinates?.let { root ->
-                            if (root.isAttached && coordinates.isAttached) {
-                                val rootPos = root.localPositionOf(coordinates, Offset.Zero)
-                                transferZoneBounds = Rect(
-                                    left = rootPos.x,
-                                    top = rootPos.y,
-                                    right = rootPos.x + coordinates.size.width,
-                                    bottom = rootPos.y + coordinates.size.height
-                                )
-                            }
-                        }
-                    }
-                    .padding(16.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.SwapHoriz,
-                        contentDescription = null,
-                        tint = Color(0xFFFF5D5D),
-                        modifier = Modifier.size(52.dp)
-                    )
-                    Spacer(modifier = Modifier.height(14.dp))
-                    Text(
-                        text = if (appLanguage == AppLanguage.RU) "ПЕРЕВОД ХОДА" else if (appLanguage == AppLanguage.IT) "TRASFERISCI" else "TRANSFER ATTACK",
-                        color = Color.White,
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Black,
-                        textAlign = TextAlign.Center
-                    )
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Text(
-                        text = if (appLanguage == AppLanguage.RU) "Отпустите карту здесь" else if (appLanguage == AppLanguage.IT) "Rilascia la carta qui" else "Release card here",
-                        color = Color.White.copy(alpha = 0.62f),
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        textAlign = TextAlign.Center
-                    )
-                }
-            }
-        }
+
 
         if (activeDraggedCard != null) {
             val origPos = cardPositions[activeDraggedCard!!.id] ?: Offset.Zero
@@ -2592,97 +2565,168 @@ fun CustomDeckSelectionScreen(viewModel: DurakViewModel) {
                 .fillMaxWidth(),
             contentAlignment = Alignment.Center
         ) {
-            LazyRow(
+            BoxWithConstraints(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 12.dp)
-                    .testTag("custom_deck_carousel"),
-                horizontalArrangement = Arrangement.spacedBy((-42).dp),
-                contentPadding = PaddingValues(horizontal = 48.dp),
-                verticalAlignment = Alignment.CenterVertically
+                    .height(340.dp),
+                contentAlignment = Alignment.Center
             ) {
-                items(fullStandardDeck) { card ->
-                    val isSelected = currentSelectedCards.contains(card.id)
-                    
-                    Box(
-                        modifier = Modifier
-                            .graphicsLayer {
-                                // Add subtle depth based on selection
-                                scaleX = if (isSelected) 1.05f else 0.95f
-                                scaleY = if (isSelected) 1.05f else 0.95f
-                            }
-                            .offset(y = if (isSelected) (-20).dp else 0.dp)
-                            .shadow(
-                                elevation = if (isSelected) 10.dp else 2.dp,
-                                shape = RoundedCornerShape(14.dp)
-                            )
-                            .clip(RoundedCornerShape(14.dp))
-                            .background(Color.White)
-                            .clickable {
-                                viewModel.toggleCustomDeckCard(card.id)
-                            }
-                            .border(
-                                width = if (isSelected) 2.5.dp else 1.dp,
-                                color = if (isSelected) MaterialTheme.colorScheme.primary else Color.Black.copy(alpha = 0.08f),
-                                shape = RoundedCornerShape(14.dp)
-                            )
-                            .size(80.dp, 120.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        val displayColor = if (card.suit.colorRed) SuitRed else SuitBlack
-                        
-                        // Corner Indicator (Top Left)
+                val parentMaxWidth = maxWidth
+                val viewportWidthPx = with(LocalDensity.current) { parentMaxWidth.toPx() }
+                val cardWidthDp = 90.dp
+                val cardHeightDp = 140.dp
+                val overlapDp = (-54).dp
+                val scrollState = rememberScrollState()
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .horizontalScroll(scrollState)
+                        .testTag("custom_deck_carousel"),
+                    horizontalArrangement = Arrangement.spacedBy(overlapDp),
+                    verticalAlignment = Alignment.Bottom
+                ) {
+                    Spacer(modifier = Modifier.width(parentMaxWidth / 2 - cardWidthDp / 2))
+                    fullStandardDeck.forEachIndexed { index, card ->
+                        val isSelected = currentSelectedCards.contains(card.id)
+
+                        var cardDragOffsetY by remember(card.id) { mutableStateOf(0f) }
+                        var isDraggingCard by remember(card.id) { mutableStateOf(false) }
+
+                        val animatedDragOffsetY by animateFloatAsState(
+                            targetValue = if (isDraggingCard) cardDragOffsetY else 0f,
+                            animationSpec = if (isDraggingCard) androidx.compose.animation.core.snap() else spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessHigh),
+                            label = "CardDragY"
+                        )
+
+                        val density = LocalDensity.current
+                        val cardWidthPx = with(density) { cardWidthDp.toPx() }
+                        val overlapPx = with(density) { overlapDp.toPx() }
+
+                        val cardCenterPosInContent = index * (cardWidthPx + overlapPx) + cardWidthPx / 2f
+                        val viewportCenterInContent = scrollState.value + viewportWidthPx / 2f
+                        val delta = cardCenterPosInContent - viewportCenterInContent
+                        val normalizedDiff = (delta / (viewportWidthPx / 1.8f)).coerceIn(-1.5f, 1.5f)
+
+                        val rotationAngle = normalizedDiff * 25f
+                        val downwardArc = (normalizedDiff * normalizedDiff * 35f).dp
+                        val selectedLift = if (isSelected) (-28).dp else 0.dp
+
                         Box(
                             modifier = Modifier
-                                .fillMaxSize()
-                                .padding(6.dp)
-                        ) {
-                            Column(
-                                modifier = Modifier.align(Alignment.TopStart),
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                Text(
-                                    text = card.rank.symbol,
-                                    color = displayColor,
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Black,
-                                    lineHeight = 14.sp
+                                .size(cardWidthDp, cardHeightDp)
+                                .graphicsLayer {
+                                    rotationZ = rotationAngle
+                                    translationY = downwardArc.toPx() + selectedLift.toPx() + animatedDragOffsetY
+                                    val scale = if (isSelected) 1.05f else 0.92f
+                                    scaleX = scale
+                                    scaleY = scale
+                                    shadowElevation = if (isSelected) 12.dp.toPx() else 3.dp.toPx()
+                                }
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(Color.White)
+                                .border(
+                                    width = if (isSelected) 3.dp else 1.5.dp,
+                                    brush = if (isSelected) {
+                                        Brush.linearGradient(
+                                            listOf(
+                                                MaterialTheme.colorScheme.primary,
+                                                MaterialTheme.colorScheme.primaryContainer
+                                            )
+                                        )
+                                    } else {
+                                        Brush.linearGradient(
+                                            listOf(
+                                                Color.Black.copy(alpha = 0.15f),
+                                                Color.Black.copy(alpha = 0.05f)
+                                            )
+                                        )
+                                    },
+                                    shape = RoundedCornerShape(16.dp)
                                 )
+                                .pointerInput(card.id) {
+                                    detectDragGestures(
+                                        onDragStart = {
+                                            isDraggingCard = true
+                                            cardDragOffsetY = 0f
+                                        },
+                                        onDrag = { change, dragAmount ->
+                                            if (kotlin.math.abs(dragAmount.y) > kotlin.math.abs(dragAmount.x) || cardDragOffsetY != 0f) {
+                                                change.consume()
+                                                cardDragOffsetY += dragAmount.y
+                                            }
+                                        },
+                                        onDragEnd = {
+                                            isDraggingCard = false
+                                            if (cardDragOffsetY < -140f) {
+                                                viewModel.toggleCustomDeckCard(card.id)
+                                            }
+                                            cardDragOffsetY = 0f
+                                        },
+                                        onDragCancel = {
+                                            isDraggingCard = false
+                                            cardDragOffsetY = 0f
+                                        }
+                                    )
+                                }
+                                .clickable {
+                                    viewModel.toggleCustomDeckCard(card.id)
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            val displayColor = if (card.suit.colorRed) SuitRed else SuitBlack
+
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(8.dp)
+                            ) {
+                                Column(
+                                    modifier = Modifier.align(Alignment.TopStart),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Text(
+                                        text = card.rank.symbol,
+                                        color = displayColor,
+                                        fontSize = 16.sp,
+                                        fontWeight = FontWeight.Black,
+                                        lineHeight = 16.sp
+                                    )
+                                    Text(
+                                        text = card.suit.symbol,
+                                        color = displayColor,
+                                        fontSize = 12.sp,
+                                        lineHeight = 12.sp
+                                    )
+                                }
+
                                 Text(
                                     text = card.suit.symbol,
-                                    color = displayColor,
-                                    fontSize = 10.sp,
-                                    lineHeight = 10.sp
+                                    color = displayColor.copy(alpha = 0.12f),
+                                    fontSize = 54.sp,
+                                    modifier = Modifier.align(Alignment.Center)
                                 )
-                            }
-                            
-                            // Center symbol (large)
-                            Text(
-                                text = card.suit.symbol,
-                                color = displayColor.copy(alpha = 0.15f),
-                                fontSize = 48.sp,
-                                modifier = Modifier.align(Alignment.Center)
-                            )
-                            
-                            // Selection overlays: custom checkmark
-                            if (isSelected) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(18.dp)
-                                        .background(MaterialTheme.colorScheme.primary, CircleShape)
-                                        .align(Alignment.TopEnd),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Check,
-                                        contentDescription = "Selected",
-                                        tint = MaterialTheme.colorScheme.onPrimary,
-                                        modifier = Modifier.size(12.dp)
-                                    )
+
+                                if (isSelected) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(20.dp)
+                                            .background(MaterialTheme.colorScheme.primary, CircleShape)
+                                            .align(Alignment.TopEnd),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Check,
+                                            contentDescription = "Selected",
+                                            tint = MaterialTheme.colorScheme.onPrimary,
+                                            modifier = Modifier.size(13.dp)
+                                        )
+                                    }
                                 }
                             }
                         }
                     }
+                    Spacer(modifier = Modifier.width(parentMaxWidth / 2 - cardWidthDp / 2))
                 }
             }
         }

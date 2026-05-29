@@ -198,10 +198,10 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
         "LOST_TITLE" to "DEFEAT! YOU ARE THE DURAK!",
         "DRAW_TITLE" to "DRAW GAME!",
         "DISC_TITLE" to "Opponent disconnected!",
-        "STATUS_TITLE_LABEL" to "Animation Update",
+        "STATUS_TITLE_LABEL" to "Animation Update. The Final Version",
         "CHANGELOG_BTN" to "Changelog",
         "CHANGELOG_TITLE" to "Version Changelog",
-        "CHANGELOG_TEXT" to "Version 0.1.2_01 (Micro Patch)\n\n• Future Roadmap Tab: Added an interactive timeline showing future releases directly from the main menu top-left map icon.\n• High-Performance Overlapping Deck Selection Screen: Fully customized deck builder featuring overlapping cards, responsive fling gestures, and a modern Material 3/One UI 8.x layout.\n• Transfer Mode Container Wrap: Resolved grid squeezing on defensive transfer indicators by integrating the flow container alongside table item groups.\n• Drag overlay refinement: Kept dragging cards physically on top of background borders and overlay dialogue stacks."
+        "CHANGELOG_TEXT" to "Version 0.1.2_02 (Micro Patch)\n\n• Fanned Player Deck & Physics: All active hand cards are now aligned in a beautiful, space-efficient fanned format. Dragging horizontally on any card sifts/scrolls the entire hand, and dragging any card upwards pulls it out to play.\n• Custom Deck & UI Refinements: Enhanced scrolling consistency and updated the build metadata structure."
     )
 
     private val ruTranslations = mapOf(
@@ -243,16 +243,17 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
         "LOST_TITLE" to "ПОРАЖЕНИЕ! ВЫ ДУРАК!",
         "DRAW_TITLE" to "НИЧЬЯ!",
         "DISC_TITLE" to "Игрок отключился!",
-        "STATUS_TITLE_LABEL" to "Анимационное обновление",
+        "STATUS_TITLE_LABEL" to "Анимационное обновление. Финальная версия",
         "CHANGELOG_BTN" to "Изменения",
         "CHANGELOG_TITLE" to "История изменений",
-        "CHANGELOG_TEXT" to "Версия 0.1.2_01 (Микро Патч)\n\n• Дорожная Карта Будущего: Добавлена интерактивная вкладка Roadmap на главном экране (иконка карты на панели слева вверху), показывающая этапы развития игры.\n• Настройка Пользовательской Колоды: Создание индивидуальной игровой колоды в горизонтальной карусели со стильным эффектом перекрытия карт, тактильным откликом в духе One UI 8.x.\n• Исправление Зоны Перевода: Устранено сжатие стола при переводе/пассе карт. Кнопка перевода теперь интегрирована прямо в сетку стола и оборачивается вместе с активными картами.\n• Плавное взаимодействие: Улучшены слои поверхностей при перетаскивании со стабильной физикой возврата."
+        "CHANGELOG_TEXT" to "Версия 0.1.2_02 (Микро Патч)\n\n• Веерная Колода Игрока: Карты в руке теперь отображаются в виде тактильного веера. Листание происходит свайпом влево/вправо по любой карте, а вертикальный свайп вверх вытягивает нужную карту на игровой стол.\n• Тонкая настройка интерфейса: Оптимизирована плавная прокрутка конструктора колоды и исправлены метаданные сборки."
     )
 
     private val itTranslations = mapOf(
+        "STATUS_TITLE_LABEL" to "Aggiornamento animazioni. La versione finale",
         "CHANGELOG_BTN" to "Registro",
         "CHANGELOG_TITLE" to "Registro Modifiche (Beta)",
-        "CHANGELOG_TEXT" to "Versione 0.1.2_01 (Micro Patch)\n\n• Tabella di marcia del futuro: Aggiunto un calendario interattivo di sviluppo nell'angolo in alto a sinistra della schermata principale.\n• Schermata di selezione mazzo personalizzato: Generatore di mazzi con carte sovrapposte in un layout scattante, gesti fluidi e ottimizzato per l'uso a una mano (One UI 8.x).\n• Allineamento della zona di passaggio: Risolto il bug di ridimensionamento del tavolo integrando la zona di trasferimento direttamente nella griglia delle carte.\n• Perfezionamento del drag-and-drop: Controllo del trascinamento fluido senza interruzioni e ritorno immediato delle carte."
+        "CHANGELOG_TEXT" to "Versione 0.1.2_02 (Micro Patch)\n\n• Mazzo a ventaglio del giocatore: Le carte nella mano del giocatore sono ora allineate a ventaglio. Scorrendo a sinistra o a destra su qualsiasi carta si fa scorrere l'intero mazzo, mentre trascinando una carta verso l'alto la si lancia sul tavolo.\n• Ottimizzazioni per mazzo personalizzato e interfaccia: Prestazioni migliorate e metadati aggiornati con precisione."
     )
 
     fun getString(key: String): String {

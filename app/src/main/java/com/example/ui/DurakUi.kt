@@ -352,7 +352,7 @@ fun MainMenuScreen(viewModel: DurakViewModel, statsList: List<GameStat>) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "0.1.2_01",
+                    text = "0.1.2_02",
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f)
@@ -1404,6 +1404,7 @@ fun GameTableScreen(viewModel: DurakViewModel) {
     )
 
     var transferZoneBounds by remember { mutableStateOf<Rect?>(null) }
+    var handScrollOffsetPx by remember { mutableStateOf(0f) }
 
     Box(
         modifier = Modifier
@@ -1885,81 +1886,168 @@ fun GameTableScreen(viewModel: DurakViewModel) {
                     sortedNonTrumps + sortedTrumps
                 }
 
-                // 5. PLAYER CARDS HAND: Horizontal swipeable deck inside footer with real physics drag and drop
-                LazyRow(
+                // 5. PLAYER CARDS HAND: Custom fanned horizontal deck inside footer with real physics drag and drop
+                BoxWithConstraints(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(124.dp),
-                    horizontalArrangement = Arrangement.spacedBy((-16).dp), // beautiful card overlay fan
-                    contentPadding = PaddingValues(horizontal = 16.dp)
+                        .height(130.dp),
+                    contentAlignment = Alignment.BottomCenter
                 ) {
-                    items(sortedHand, key = { it.id }) { card ->
-                        val isThisCardDragged = (activeDraggedCard?.id == card.id)
+                    val containerWidth = maxWidth
+                    val density = LocalDensity.current
+                    val containerWidthPx = with(density) { containerWidth.toPx() }
 
-                        CardComponent(
-                            card = card,
-                            faceUp = true,
-                            onClick = null, // Disable tap-to-play card from hand completely
-                            modifier = Modifier
-                                .size(74.dp, 110.dp)
-                                .graphicsLayer {
-                                    alpha = if (isThisCardDragged) 0f else 1f
-                                }
-                                .onGloballyPositioned { coordinates ->
-                                    rootLayoutCoordinates?.let { root ->
-                                        if (root.isAttached && coordinates.isAttached) {
-                                            cardPositions[card.id] = root.localPositionOf(coordinates, Offset.Zero)
+                    val cardWidth = 74.dp
+                    val cardHeight = 110.dp
+                    val cardWidthPx = with(density) { cardWidth.toPx() }
+
+                    // We overlap cards beautifully.
+                    val cardSpacing = 32.dp
+                    val cardSpacingPx = with(density) { cardSpacing.toPx() }
+
+                    val totalDeckWidthPx = if (sortedHand.isNotEmpty()) {
+                        (sortedHand.size - 1) * cardSpacingPx + cardWidthPx
+                    } else 0f
+
+                    val minScroll = if (totalDeckWidthPx > containerWidthPx) {
+                        -(totalDeckWidthPx - containerWidthPx) - 60f
+                    } else 0f
+                    val maxScroll = if (totalDeckWidthPx > containerWidthPx) {
+                        60f
+                    } else 0f
+
+                    // Automatically fit scroll within bounds if deck size changes
+                    LaunchedEffect(sortedHand.size) {
+                        handScrollOffsetPx = handScrollOffsetPx.coerceIn(minScroll, maxScroll)
+                    }
+
+                    // Centering of the deck if too small for container
+                    val deckStartX = if (totalDeckWidthPx <= containerWidthPx) {
+                        (containerWidthPx - totalDeckWidthPx) / 2f
+                    } else {
+                        0f
+                    }
+
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.BottomStart
+                    ) {
+                        sortedHand.forEachIndexed { index, card ->
+                            val isThisCardDragged = (activeDraggedCard?.id == card.id)
+
+                            // Position and rotation math
+                            val cardStaticXPx = deckStartX + handScrollOffsetPx + index * cardSpacingPx
+                            val cardCenterX = cardStaticXPx + cardWidthPx / 2f
+                            val containerCenterX = containerWidthPx / 2f
+                            val distanceFromCenter = cardCenterX - containerCenterX
+                            
+                            val maxRange = containerWidthPx / 1.6f
+                            val normalized = (distanceFromCenter / maxRange).coerceIn(-1.1f, 1.1f)
+
+                            val rotationAngle = normalized * 15f
+                            val downwardArcPx = normalized * normalized * with(density) { 15.dp.toPx() }
+
+                            var localDragOffsetX by remember(card.id) { mutableStateOf(0f) }
+                            var localDragOffsetY by remember(card.id) { mutableStateOf(0f) }
+                            var isDraggingThisCardUp by remember(card.id) { mutableStateOf(false) }
+
+                            CardComponent(
+                                card = card,
+                                faceUp = true,
+                                onClick = null,
+                                modifier = Modifier
+                                    .size(cardWidth, cardHeight)
+                                    .offset {
+                                        IntOffset(
+                                            x = cardStaticXPx.toInt(),
+                                            y = downwardArcPx.toInt()
+                                        )
+                                    }
+                                    .graphicsLayer {
+                                        alpha = if (isThisCardDragged) 0f else 1f
+                                        rotationZ = rotationAngle
+                                    }
+                                    .onGloballyPositioned { coordinates ->
+                                        rootLayoutCoordinates?.let { root ->
+                                            if (root.isAttached && coordinates.isAttached) {
+                                                cardPositions[card.id] = root.localPositionOf(coordinates, Offset.Zero)
+                                            }
                                         }
                                     }
-                                }
-                                .pointerInput(card.id) {
-                                    detectDragGestures(
-                                        onDragStart = { offset ->
-                                            activeDraggedCard = card
-                                            isDragging = true
-                                            dragOffsetX = 0f
-                                            dragOffsetY = 0f
-                                        },
-                                        onDrag = { change, dragAmount ->
-                                            change.consume()
-                                            dragOffsetX += dragAmount.x
-                                            dragOffsetY += dragAmount.y
-                                        },
-                                        onDragEnd = {
-                                            val density = this.density
-                                            val dragYDp = dragOffsetY / density
+                                    .pointerInput(card.id) {
+                                        detectDragGestures(
+                                            onDragStart = { offset ->
+                                                localDragOffsetX = 0f
+                                                localDragOffsetY = 0f
+                                                isDraggingThisCardUp = false
+                                            },
+                                            onDrag = { change, dragAmount ->
+                                                if (!isDraggingThisCardUp) {
+                                                    localDragOffsetX += dragAmount.x
+                                                    localDragOffsetY += dragAmount.y
 
-                                            val origPos = cardPositions[card.id] ?: Offset.Zero
-                                            val currentCardX = origPos.x + dragOffsetX
-                                            val currentCardY = origPos.y + dragOffsetY
+                                                    if (localDragOffsetY < -30f && kotlin.math.abs(localDragOffsetY) > kotlin.math.abs(localDragOffsetX)) {
+                                                        isDraggingThisCardUp = true
+                                                        activeDraggedCard = card
+                                                        isDragging = true
+                                                        dragOffsetX = localDragOffsetX
+                                                        dragOffsetY = localDragOffsetY
+                                                        change.consume()
+                                                    } else if (kotlin.math.abs(localDragOffsetX) > 6f) {
+                                                        handScrollOffsetPx = (handScrollOffsetPx + dragAmount.x).coerceIn(minScroll, maxScroll)
+                                                        change.consume()
+                                                    }
+                                                } else {
+                                                    dragOffsetX += dragAmount.x
+                                                    dragOffsetY += dragAmount.y
+                                                    change.consume()
+                                                }
+                                            },
+                                            onDragEnd = {
+                                                if (isDraggingThisCardUp) {
+                                                    val currentDensity = this.density
+                                                    val dragYDp = dragOffsetY / currentDensity
 
-                                            val isOverTransferZone = canPlayerTransferNow && transferZoneBounds?.let { bounds ->
-                                                currentCardX >= bounds.left - 80 && currentCardX <= bounds.right + 80 &&
-                                                currentCardY >= bounds.top - 120 && currentCardY <= bounds.bottom + 120
-                                            } ?: false
+                                                    val origPos = cardPositions[card.id] ?: Offset.Zero
+                                                    val currentCardX = origPos.x + dragOffsetX
+                                                    val currentCardY = origPos.y + dragOffsetY
 
-                                            if (isOverTransferZone) {
-                                                viewModel.playCard(card, intentTransferOnly = true)
-                                                isDragging = false
-                                                activeDraggedCard = null
-                                                dragOffsetX = 0f
-                                                dragOffsetY = 0f
-                                            } else if (dragYDp < -100f) {
-                                                viewModel.playCard(card)
-                                                isDragging = false
-                                                activeDraggedCard = null
-                                                dragOffsetX = 0f
-                                                dragOffsetY = 0f
-                                            } else {
-                                                isDragging = false
+                                                    val isOverTransferZone = canPlayerTransferNow && transferZoneBounds?.let { bounds ->
+                                                        currentCardX >= bounds.left - 80 && currentCardX <= bounds.right + 80 &&
+                                                        currentCardY >= bounds.top - 120 && currentCardY <= bounds.bottom + 120
+                                                    } ?: false
+
+                                                    if (isOverTransferZone) {
+                                                        viewModel.playCard(card, intentTransferOnly = true)
+                                                        isDragging = false
+                                                        activeDraggedCard = null
+                                                        dragOffsetX = 0f
+                                                        dragOffsetY = 0f
+                                                    } else if (dragYDp < -100f) {
+                                                        viewModel.playCard(card)
+                                                        isDragging = false
+                                                        activeDraggedCard = null
+                                                        dragOffsetX = 0f
+                                                        dragOffsetY = 0f
+                                                    } else {
+                                                        isDragging = false
+                                                    }
+                                                }
+                                                isDraggingThisCardUp = false
+                                            },
+                                            onDragCancel = {
+                                                if (isDraggingThisCardUp) {
+                                                    isDragging = false
+                                                    activeDraggedCard = null
+                                                    dragOffsetX = 0f
+                                                    dragOffsetY = 0f
+                                                }
+                                                isDraggingThisCardUp = false
                                             }
-                                        },
-                                        onDragCancel = {
-                                            isDragging = false
-                                        }
-                                    )
-                                }
-                        )
+                                        )
+                                    }
+                            )
+                        }
                     }
                 }
 

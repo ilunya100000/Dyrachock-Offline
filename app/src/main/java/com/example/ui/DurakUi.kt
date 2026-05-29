@@ -34,6 +34,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -327,7 +330,7 @@ fun MainMenuScreen(viewModel: DurakViewModel, statsList: List<GameStat>) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "0.1.1_01",
+                    text = "0.1.1_02",
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f)
@@ -1105,6 +1108,30 @@ fun GameTableScreen(viewModel: DurakViewModel) {
 
     var showLogs by remember { mutableStateOf(false) }
 
+    var rootLayoutCoordinates by remember { mutableStateOf<LayoutCoordinates?>(null) }
+    val cardPositions = remember { mutableStateMapOf<String, Offset>() }
+    var activeDraggedCard by remember { mutableStateOf<Card?>(null) }
+    var dragOffsetX by remember { mutableStateOf(0f) }
+    var dragOffsetY by remember { mutableStateOf(0f) }
+
+    val animatedDragOffsetX by animateFloatAsState(
+        targetValue = dragOffsetX,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessHigh),
+        label = "DragX"
+    )
+    val animatedDragOffsetY by animateFloatAsState(
+        targetValue = dragOffsetY,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessHigh),
+        finishedListener = { value ->
+            if (value == 0f && dragOffsetX == 0f) {
+                activeDraggedCard = null
+            }
+        },
+        label = "DragY"
+    )
+
+    var transferZoneBounds by remember { mutableStateOf<Rect?>(null) }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -1117,6 +1144,7 @@ fun GameTableScreen(viewModel: DurakViewModel) {
             )
             .statusBarsPadding()
             .navigationBarsPadding()
+            .onGloballyPositioned { rootLayoutCoordinates = it }
     ) {
         Column(
             modifier = Modifier.fillMaxSize(),
@@ -1380,7 +1408,20 @@ fun GameTableScreen(viewModel: DurakViewModel) {
                                                 width = 1.5.dp,
                                                 brush = Brush.linearGradient(listOf(Color(0xFFFF5D5D), Color(0xFFFF3333))),
                                                 shape = RoundedCornerShape(14.dp)
-                                            ),
+                                            )
+                                            .onGloballyPositioned { coordinates ->
+                                                rootLayoutCoordinates?.let { root ->
+                                                    if (root.isAttached && coordinates.isAttached) {
+                                                        val rootPos = root.localPositionOf(coordinates, Offset.Zero)
+                                                        transferZoneBounds = Rect(
+                                                            left = rootPos.x,
+                                                            top = rootPos.y,
+                                                            right = rootPos.x + coordinates.size.width,
+                                                            bottom = rootPos.y + coordinates.size.height
+                                                        )
+                                                    }
+                                                }
+                                            },
                                         contentAlignment = Alignment.Center
                                     ) {
                                         Column(
@@ -1568,16 +1609,7 @@ fun GameTableScreen(viewModel: DurakViewModel) {
                     contentPadding = PaddingValues(horizontal = 16.dp)
                 ) {
                     items(sortedHand, key = { it.id }) { card ->
-                        var offsetX by remember { mutableStateOf(0f) }
-                        var offsetY by remember { mutableStateOf(0f) }
-                        val animatedOffsetX by animateFloatAsState(
-                            targetValue = offsetX,
-                            animationSpec = spring(stiffness = Spring.StiffnessHigh)
-                        )
-                        val animatedOffsetY by animateFloatAsState(
-                            targetValue = offsetY,
-                            animationSpec = spring(stiffness = Spring.StiffnessHigh)
-                        )
+                        val isThisCardDragged = (activeDraggedCard?.id == card.id)
 
                         CardComponent(
                             card = card,
@@ -1585,32 +1617,59 @@ fun GameTableScreen(viewModel: DurakViewModel) {
                             onClick = null, // Disable tap-to-play card from hand completely
                             modifier = Modifier
                                 .size(74.dp, 110.dp)
-                                .zIndex(if (offsetX != 0f || offsetY != 0f) 999f else 1f)
-                                .offset { IntOffset(animatedOffsetX.roundToInt(), animatedOffsetY.roundToInt()) }
-                                .shadow(6.dp, RoundedCornerShape(12.dp))
+                                .graphicsLayer {
+                                    alpha = if (isThisCardDragged) 0f else 1f
+                                }
+                                .onGloballyPositioned { coordinates ->
+                                    rootLayoutCoordinates?.let { root ->
+                                        if (root.isAttached && coordinates.isAttached) {
+                                            cardPositions[card.id] = root.localPositionOf(coordinates, Offset.Zero)
+                                        }
+                                    }
+                                }
                                 .pointerInput(card.id) {
                                     detectDragGestures(
+                                        onDragStart = { offset ->
+                                            activeDraggedCard = card
+                                            dragOffsetX = 0f
+                                            dragOffsetY = 0f
+                                        },
                                         onDrag = { change, dragAmount ->
                                             change.consume()
-                                            offsetX += dragAmount.x
-                                            offsetY += dragAmount.y
+                                            dragOffsetX += dragAmount.x
+                                            dragOffsetY += dragAmount.y
                                         },
                                         onDragEnd = {
-                                            if (offsetY < -130f) {
-                                                if (canPlayerTransferNow && offsetX > 30f) {
-                                                    // Dragged towards the red Transfer Drop Zone specifically on the right
-                                                    viewModel.playCard(card, intentTransferOnly = true)
-                                                } else {
-                                                    // Normal play throw
-                                                    viewModel.playCard(card)
-                                                }
+                                            val density = this.density
+                                            val dragYDp = dragOffsetY / density
+
+                                            val origPos = cardPositions[card.id] ?: Offset.Zero
+                                            val currentCardX = origPos.x + dragOffsetX
+                                            val currentCardY = origPos.y + dragOffsetY
+
+                                            val isOverTransferZone = canPlayerTransferNow && transferZoneBounds?.let { bounds ->
+                                                currentCardX >= bounds.left - 50 && currentCardX <= bounds.right + 50 &&
+                                                currentCardY >= bounds.top - 100 && currentCardY <= bounds.bottom + 100
+                                            } ?: false
+
+                                            if (isOverTransferZone) {
+                                                viewModel.playCard(card, intentTransferOnly = true)
+                                                activeDraggedCard = null
+                                                dragOffsetX = 0f
+                                                dragOffsetY = 0f
+                                            } else if (dragYDp < -100f) {
+                                                viewModel.playCard(card)
+                                                activeDraggedCard = null
+                                                dragOffsetX = 0f
+                                                dragOffsetY = 0f
+                                            } else {
+                                                dragOffsetX = 0f
+                                                dragOffsetY = 0f
                                             }
-                                            offsetX = 0f
-                                            offsetY = 0f
                                         },
                                         onDragCancel = {
-                                            offsetX = 0f
-                                            offsetY = 0f
+                                            dragOffsetX = 0f
+                                            dragOffsetY = 0f
                                         }
                                     )
                                 }
@@ -1801,6 +1860,27 @@ fun GameTableScreen(viewModel: DurakViewModel) {
                         }
                     }
                 }
+            }
+        }
+
+        if (activeDraggedCard != null) {
+            val origPos = cardPositions[activeDraggedCard!!.id] ?: Offset.Zero
+            val floatingX = origPos.x + animatedDragOffsetX
+            val floatingY = origPos.y + animatedDragOffsetY
+
+            Box(
+                modifier = Modifier
+                    .offset { IntOffset(floatingX.roundToInt(), floatingY.roundToInt()) }
+                    .zIndex(1000f)
+            ) {
+                CardComponent(
+                    card = activeDraggedCard!!,
+                    faceUp = true,
+                    onClick = null,
+                    modifier = Modifier
+                        .size(74.dp, 110.dp)
+                        .shadow(12.dp, RoundedCornerShape(12.dp))
+                )
             }
         }
     }

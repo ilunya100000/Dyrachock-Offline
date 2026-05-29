@@ -167,7 +167,7 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
         "STATUS_TITLE_LABEL" to "Animation Update",
         "CHANGELOG_BTN" to "Changelog",
         "CHANGELOG_TITLE" to "Version Changelog",
-        "CHANGELOG_TEXT" to "Version 0.1.1_01 (Micro Patch)\n\n• Snappy Animations: Tuned entry and return physics for fluid, fast gameplay.\n• Z-Index Overlay Fix: Dragged cards now always render on top of all boards, tables, and dialogs.\n• Smart Sorting: Cards sorted cleanly by Suit, and the Trump suit is always kept at the far right of your hand.\n• Interactive Transfer Area: Moved Transfer Drop Zone adjacent to the table cards for intuitive gestures.\n• Pure Drag & Play: Tap-to-play completely disabled for deck hand cards to prevent accidental actions."
+        "CHANGELOG_TEXT" to "Version 0.1.1_02 (Micro Patch)\n\n• Ultimate Drag Overlay Layer: Structural touch overlay brings active cards strictly above all background containers, borders, dialogs, and panels.\n• Snappy Spring Back physical returns: Releasing cards outside drop zones triggers a fast, buttery-smooth return animation back to your hand slots.\n• Flawless Suit & Trump Sorting: Smartly auto-groups raw cards by suit, and anchors the trump suit to the far-right index.\n• Tap-to-play completely disabled from hand: Plays are initiated exclusively via physical drag-and-drop to completely exclude any accidental taps."
     )
 
     private val ruTranslations = mapOf(
@@ -212,13 +212,13 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
         "STATUS_TITLE_LABEL" to "Анимационное обновление",
         "CHANGELOG_BTN" to "Изменения",
         "CHANGELOG_TITLE" to "История изменений",
-        "CHANGELOG_TEXT" to "Версия 0.1.1_01 (Микро Патч)\n\n• Молниеносные анимации: настроена ультра-быстрая скорость возврата и раздачи карт.\n• Исправление слоев Z-Index: переносимые карты теперь всегда отображаются поверх всех панелей и стола.\n• Интеллектуальная сортировка: карты отсортированы по мастям, а козыри всегда находятся в правой части руки.\n• Изменение зоны перевода: область Перевода/Паса перенесена на основной стол рядом с активными картами.\n• Управление без случайных кликов: отключен розыгрыш карт тапом по руке — играть можно только перетаскиванием."
+        "CHANGELOG_TEXT" to "Версия 0.1.1_02 (Микро Патч)\n\n• Полная отрисовка поверх экрана: Структурное исправление переноса карт гарантирует отображение перетаскиваемой карты строго надо всеми задними панелями, рамками и диалогами.\n• Мгновенное возвращение обратно: Отпускание карты мимо игрового поля запускает ультра-быструю, приятную анимацию возврата карты в руку.\n• Безупречная сортировка: Настроена интеллектуальная автоматическая группировка карт по мастям, а козыри всегда находятся строго в правой части руки.\n• Управление без случайных кликов: Розыгрыш карт из руки тапом полностью заблокирован. Карты можно разыгрывать только физическим перетаскиванием."
     )
 
     private val itTranslations = mapOf(
         "CHANGELOG_BTN" to "Registro",
         "CHANGELOG_TITLE" to "Registro Modifiche (Beta)",
-        "CHANGELOG_TEXT" to "Versione 0.1.1_01 (Micro Patch)\n\n• Animazioni scattanti: ottimizzata la velocità fisica di rientro e pesca delle carte.\n• Corretto Z-Index: le carte trascinate ora passano sempre sopra tutti i tabelloni e controlli.\n• Ordinamento smart: carte raggruppate per seme, con la briscola sempre a destra della mano.\n• Area Trasferimento integrata: spostata la zona di passaggio vicino alle carte sul tavolo di battaglia.\n• Gioco puro drag-and-drop: eliminato l'invio accidentale tramite click dalla mano; ora si gioca solo trascinando."
+        "CHANGELOG_TEXT" to "Versione 0.1.1_02 (Micro Patch)\n\n• Rendering sopra ogni cosa: Correzione strutturale che garantisce la visibilità della carta trascinata rigorosamente sopra qualsiasi sfondo, pannello di controllo e bordo.\n• Ritorno scattante e fluido: Semplificato il rientro ad alta rigidità della carta respinta senza bug di ritaglio.\n• Ordinamento perfetto per semi: Le carte vengono raggruppate per seme automaticamente con la briscola ancorata a destra della mano.\n• Selezione click disabilitata: Invio delle carte possibile unicamente tramite trascinamento fisico, prevenendo tocchi accidentali."
     )
 
     fun getString(key: String): String {

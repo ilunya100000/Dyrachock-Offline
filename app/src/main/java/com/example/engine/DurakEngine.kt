@@ -41,7 +41,7 @@ class DurakEngine {
     }
 
     // Start a new match
-    fun startMatch(player1Name: String, player2Name: String, isBotGame: Boolean, deckSize: Int = 36, isTransferMode: Boolean = false) {
+    fun startMatch(player1Name: String, player2Name: String, isBotGame: Boolean, deckSize: Int = 36, isTransferMode: Boolean = false, customDeckIds: Set<String>? = null) {
         this.isTransferMode = isTransferMode
         deck.clear()
         tablePairs.clear()
@@ -51,11 +51,23 @@ class DurakEngine {
         gameLogRu.clear()
         discardPileSize = 0
 
-        // Create deck of specified size
-        for (suit in Suit.values()) {
-            for (rank in Rank.values()) {
-                if (deckSize == 52 || rank.value >= 6) {
-                    deck.add(Card(suit, rank))
+        if (customDeckIds != null && customDeckIds.isNotEmpty()) {
+            // Create deck from user's custom card selections
+            for (suit in Suit.values()) {
+                for (rank in Rank.values()) {
+                    val cardId = "${suit.name}_${rank.name}"
+                    if (customDeckIds.contains(cardId)) {
+                        deck.add(Card(suit, rank))
+                    }
+                }
+            }
+        } else {
+            // Create deck of specified size
+            for (suit in Suit.values()) {
+                for (rank in Rank.values()) {
+                    if (deckSize == 52 || rank.value >= 6) {
+                        deck.add(Card(suit, rank))
+                    }
                 }
             }
         }

@@ -41,7 +41,41 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
         OFFLINE_SETUP,
         MULTIPLAYER_HUB,
         GAME_TABLE,
-        STATS_BOARD
+        STATS_BOARD,
+        CUSTOM_DECK
+    }
+
+    enum class OfflineDeckOption {
+        DECK_36,
+        DECK_52,
+        CUSTOM
+    }
+
+    private val _offlineDeckOption = MutableStateFlow(OfflineDeckOption.DECK_36)
+    val offlineDeckOption = _offlineDeckOption.asStateFlow()
+
+    private val _customDeckIds = MutableStateFlow<Set<String>>(
+        Suit.values().flatMap { s ->
+            Rank.values().filter { r -> r.value >= 6 }.map { r -> "${s.name}_${r.name}" }
+        }.toSet()
+    )
+    val customDeckIds = _customDeckIds.asStateFlow()
+
+    fun setOfflineDeckOption(option: OfflineDeckOption) {
+        _offlineDeckOption.value = option
+    }
+
+    fun toggleCustomDeckCard(cardId: String) {
+        val current = _customDeckIds.value.toMutableSet()
+        if (current.contains(cardId)) {
+            // Guarantee there's at least 12 cards to play, otherwise it's invalid
+            if (current.size > 12) {
+                current.remove(cardId)
+            }
+        } else {
+            current.add(cardId)
+        }
+        _customDeckIds.value = current
     }
 
     private val _currentScreen = MutableStateFlow(Screen.MAIN_MENU)
@@ -167,7 +201,7 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
         "STATUS_TITLE_LABEL" to "Animation Update",
         "CHANGELOG_BTN" to "Changelog",
         "CHANGELOG_TITLE" to "Version Changelog",
-        "CHANGELOG_TEXT" to "Version 0.1.1_02 (Micro Patch)\n\n• Ultimate Drag Overlay Layer: Structural touch overlay brings active cards strictly above all background containers, borders, dialogs, and panels.\n• Snappy Spring Back physical returns: Releasing cards outside drop zones triggers a fast, buttery-smooth return animation back to your hand slots.\n• Flawless Suit & Trump Sorting: Smartly auto-groups raw cards by suit, and anchors the trump suit to the far-right index.\n• Tap-to-play completely disabled from hand: Plays are initiated exclusively via physical drag-and-drop to completely exclude any accidental taps."
+        "CHANGELOG_TEXT" to "Version 0.1.2 (Patch)\n\n• Future Roadmap Tab: Added an interactive timeline showing future releases directly from the main menu top-left map icon.\n• High-Performance Overlapping Deck Selection Screen: Fully customized deck builder featuring overlapping cards, responsive fling gestures, and a modern Material 3/One UI 8.x layout.\n• Transfer Mode Container Wrap: Resolved grid squeezing on defensive transfer indicators by integrating the flow container alongside table item groups.\n• Drag overlay refinement: Kept dragging cards physically on top of background borders and overlay dialogue stacks."
     )
 
     private val ruTranslations = mapOf(
@@ -212,13 +246,13 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
         "STATUS_TITLE_LABEL" to "Анимационное обновление",
         "CHANGELOG_BTN" to "Изменения",
         "CHANGELOG_TITLE" to "История изменений",
-        "CHANGELOG_TEXT" to "Версия 0.1.1_02 (Микро Патч)\n\n• Полная отрисовка поверх экрана: Структурное исправление переноса карт гарантирует отображение перетаскиваемой карты строго надо всеми задними панелями, рамками и диалогами.\n• Мгновенное возвращение обратно: Отпускание карты мимо игрового поля запускает ультра-быструю, приятную анимацию возврата карты в руку.\n• Безупречная сортировка: Настроена интеллектуальная автоматическая группировка карт по мастям, а козыри всегда находятся строго в правой части руки.\n• Управление без случайных кликов: Розыгрыш карт из руки тапом полностью заблокирован. Карты можно разыгрывать только физическим перетаскиванием."
+        "CHANGELOG_TEXT" to "Версия 0.1.2 (Патч)\n\n• Дорожная Карта Будущего: Добавлена интерактивная вкладка Roadmap на главном экране (иконка карты на панели слева вверху), показывающая этапы развития игры.\n• Настройка Пользовательской Колоды: Создание индивидуальной игровой колоды в горизонтальной карусели со стильным эффектом перекрытия карт, тактильным откликом в духе One UI 8.x.\n• Исправление Зоны Перевода: Устранено сжатие стола при переводе/пассе карт. Кнопка перевода теперь интегрирована прямо в сетку стола и оборачивается вместе с активными картами.\n• Плавное взаимодействие: Улучшены слои поверхностей при перетаскивании со стабильной физикой возврата."
     )
 
     private val itTranslations = mapOf(
         "CHANGELOG_BTN" to "Registro",
         "CHANGELOG_TITLE" to "Registro Modifiche (Beta)",
-        "CHANGELOG_TEXT" to "Versione 0.1.1_02 (Micro Patch)\n\n• Rendering sopra ogni cosa: Correzione strutturale che garantisce la visibilità della carta trascinata rigorosamente sopra qualsiasi sfondo, pannello di controllo e bordo.\n• Ritorno scattante e fluido: Semplificato il rientro ad alta rigidità della carta respinta senza bug di ritaglio.\n• Ordinamento perfetto per semi: Le carte vengono raggruppate per seme automaticamente con la briscola ancorata a destra della mano.\n• Selezione click disabilitata: Invio delle carte possibile unicamente tramite trascinamento fisico, prevenendo tocchi accidentali."
+        "CHANGELOG_TEXT" to "Versione 0.1.2 (Patch)\n\n• Tabella di marcia del futuro: Aggiunto un calendario interattivo di sviluppo nell'angolo in alto a sinistra della schermata principale.\n• Schermata di selezione mazzo personalizzato: Generatore di mazzi con carte sovrapposte in un layout scattante, gesti fluidi e ottimizzato per l'uso a una mano (One UI 8.x).\n• Allineamento della zona di passaggio: Risolto il bug di ridimensionamento del tavolo integrando la zona di trasferimento direttamente nella griglia delle carte.\n• Perfezionamento del drag-and-drop: Controllo del trascinamento fluido senza interruzioni e ritorno immediato delle carte."
     )
 
     fun getString(key: String): String {
@@ -261,7 +295,18 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
         _activeMode.value = GameMode.OFFLINE
         hasPersistedThisGame = false
         val transferEnabled = (_offlineSubMode.value == OfflineSubMode.TRANSFER)
-        engine.startMatch("Player", "Bot", isBotGame = true, deckSize = 36, isTransferMode = transferEnabled)
+        val selectedOption = _offlineDeckOption.value
+        val deckSize = if (selectedOption == OfflineDeckOption.DECK_52) 52 else 36
+        val customDeck = if (selectedOption == OfflineDeckOption.CUSTOM) _customDeckIds.value else null
+        
+        engine.startMatch(
+            player1Name = "Player",
+            player2Name = "Bot",
+            isBotGame = true,
+            deckSize = deckSize,
+            isTransferMode = transferEnabled,
+            customDeckIds = customDeck
+        )
         _gameState.value = engine.createSnapshot().copy(opponentName = "Bot")
         _currentScreen.value = Screen.GAME_TABLE
         triggerBotRoutineIfNeeded() // Fixes bot not making first move if bot goes first!

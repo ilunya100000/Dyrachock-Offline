@@ -81,6 +81,7 @@ fun DurakApp(viewModel: DurakViewModel) {
                 DurakViewModel.Screen.MULTIPLAYER_HUB -> MultiplayerHubScreen(viewModel)
                 DurakViewModel.Screen.GAME_TABLE -> GameTableScreen(viewModel)
                 DurakViewModel.Screen.STATS_BOARD -> StatsBoardScreen(viewModel, statsList)
+                DurakViewModel.Screen.CUSTOM_DECK -> CustomDeckSelectionScreen(viewModel)
             }
         }
     }
@@ -91,6 +92,7 @@ fun DurakApp(viewModel: DurakViewModel) {
 fun MainMenuScreen(viewModel: DurakViewModel, statsList: List<GameStat>) {
     val appLanguage by viewModel.appLanguage.collectAsStateWithLifecycle()
     var showLanguageDialog by remember { mutableStateOf(false) }
+    var showRoadmapDialog by remember { mutableStateOf(false) }
     var selectedLangTemp by remember { mutableStateOf(appLanguage) }
 
     // Calculate quick stats summary
@@ -107,12 +109,25 @@ fun MainMenuScreen(viewModel: DurakViewModel, statsList: List<GameStat>) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.SpaceBetween
     ) {
-        // TOP: Dynamic Language Switching & Brand Glow
+        // TOP: Dynamic Language Switching, Brand Glow & Roadmap
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.End,
+            horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
+            IconButton(
+                onClick = { showRoadmapDialog = true },
+                modifier = Modifier
+                    .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
+                    .testTag("roadmap_button")
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Map,
+                    contentDescription = "Roadmap",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
             IconButton(
                 onClick = {
                     selectedLangTemp = appLanguage
@@ -330,7 +345,7 @@ fun MainMenuScreen(viewModel: DurakViewModel, statsList: List<GameStat>) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "0.1.1_02",
+                    text = "0.1.2",
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f)
@@ -369,6 +384,170 @@ fun MainMenuScreen(viewModel: DurakViewModel, statsList: List<GameStat>) {
                         },
                         confirmButton = {
                             TextButton(onClick = { showChangelogDialog = false }) {
+                                Text(
+                                    text = if (viewModel.appLanguage.value == AppLanguage.RU) "Закрыть" else "Close",
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        },
+                        shape = RoundedCornerShape(28.dp),
+                        containerColor = MaterialTheme.colorScheme.surface
+                    )
+                }
+
+                if (showRoadmapDialog) {
+                    AlertDialog(
+                        onDismissRequest = { showRoadmapDialog = false },
+                        title = {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Map,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                                Text(
+                                    text = when (appLanguage) {
+                                        AppLanguage.RU -> "Дорожная карта"
+                                        AppLanguage.IT -> "Tabella di marcia"
+                                        else -> "Future Roadmap"
+                                    },
+                                    fontWeight = FontWeight.Black
+                                )
+                            }
+                        },
+                        text = {
+                            Column(
+                                modifier = Modifier
+                                    .verticalScroll(rememberScrollState())
+                                    .fillMaxWidth(),
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                val milestones = listOf(
+                                    Triple(
+                                        when (appLanguage) {
+                                            AppLanguage.RU -> "Май"
+                                            AppLanguage.IT -> "Maggio"
+                                            else -> "May"
+                                        },
+                                        when (appLanguage) {
+                                            AppLanguage.RU -> "Добавление базовых функций(0.2, 0.3, 0.4)"
+                                            AppLanguage.IT -> "Aggiunta di funzioni di base(0.2, 0.3, 0.4)"
+                                            else -> "Adding base features(0.2, 0.3, 0.4)"
+                                        },
+                                        Icons.Default.Build
+                                    ),
+                                    Triple(
+                                        when (appLanguage) {
+                                            AppLanguage.RU -> "Июнь"
+                                            AppLanguage.IT -> "Giugno"
+                                            else -> "June"
+                                        },
+                                        when (appLanguage) {
+                                            AppLanguage.RU -> "Тестовые версии(0.4.x, 0.5.x)"
+                                            AppLanguage.IT -> "Versioni di test(0.4.x, 0.5.x)"
+                                            else -> "Testing versions(0.4.x, 0.5.x)"
+                                        },
+                                        Icons.Default.BugReport
+                                    ),
+                                    Triple(
+                                        when (appLanguage) {
+                                            AppLanguage.RU -> "Июль"
+                                            AppLanguage.IT -> "Luglio"
+                                            else -> "July"
+                                        },
+                                        when (appLanguage) {
+                                            AppLanguage.RU -> "Обновление интерфейса(0.6, 0.7)"
+                                            AppLanguage.IT -> "Aggiornamento dell'interfaccia(0.6, 0.7)"
+                                            else -> "Interface design overhaul(0.6, 0.7)"
+                                        },
+                                        Icons.Default.Palette
+                                    ),
+                                    Triple(
+                                        when (appLanguage) {
+                                            AppLanguage.RU -> "Август"
+                                            AppLanguage.IT -> "Agosto"
+                                            else -> "August"
+                                        },
+                                        when (appLanguage) {
+                                            AppLanguage.RU -> "Подготовка к релизу(0.8, 0.9.x)"
+                                            AppLanguage.IT -> "Preparazione al rilascio(0.8, 0.9.x)"
+                                            else -> "Preparing for release(0.8, 0.9.x)"
+                                        },
+                                        Icons.Default.RocketLaunch
+                                    ),
+                                    Triple(
+                                        when (appLanguage) {
+                                            AppLanguage.RU -> "Сентябрь"
+                                            AppLanguage.IT -> "Settembre"
+                                            else -> "September"
+                                        },
+                                        when (appLanguage) {
+                                            AppLanguage.RU -> "Релиз(1.0) 🎉"
+                                            AppLanguage.IT -> "Rilascio ufficiale(1.0) 🎉"
+                                            else -> "Official Release(1.0) 🎉"
+                                        },
+                                        Icons.Default.Star
+                                    )
+                                )
+
+                                milestones.forEach { (month, task, icon) ->
+                                    Card(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        colors = CardDefaults.cardColors(
+                                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                                        ),
+                                        shape = RoundedCornerShape(16.dp)
+                                    ) {
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(16.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(14.dp)
+                                        ) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(40.dp)
+                                                    .background(
+                                                        MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                                                        CircleShape
+                                                    ),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Icon(
+                                                    imageVector = icon,
+                                                    contentDescription = null,
+                                                    tint = MaterialTheme.colorScheme.primary,
+                                                    modifier = Modifier.size(20.dp)
+                                                )
+                                            }
+
+                                            Column(modifier = Modifier.weight(1f)) {
+                                                Text(
+                                                    text = month,
+                                                    fontWeight = FontWeight.Bold,
+                                                    fontSize = 16.sp,
+                                                    color = MaterialTheme.colorScheme.onSurface
+                                                )
+                                                Spacer(modifier = Modifier.height(2.dp))
+                                                Text(
+                                                    text = task,
+                                                    fontSize = 13.sp,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                    lineHeight = 18.sp
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        confirmButton = {
+                            TextButton(onClick = { showRoadmapDialog = false }) {
                                 Text(
                                     text = if (viewModel.appLanguage.value == AppLanguage.RU) "Закрыть" else "Close",
                                     fontWeight = FontWeight.Bold
@@ -599,6 +778,71 @@ fun OfflineSetupScreen(viewModel: DurakViewModel) {
                         color = if (subMode == com.example.viewmodel.DurakViewModel.OfflineSubMode.TRANSFER) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
                         fontWeight = FontWeight.Bold,
                         fontSize = 14.sp
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            Text(
+                text = if (appLanguage == AppLanguage.RU) "Выбор колоды" else if (appLanguage == AppLanguage.IT) "Mazzo" else "Deck Size",
+                fontSize = 15.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
+                modifier = Modifier.padding(bottom = 12.dp)
+            )
+
+            val deckOption by viewModel.offlineDeckOption.collectAsStateWithLifecycle()
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(24.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                    .padding(4.dp)
+            ) {
+                listOf(
+                    com.example.viewmodel.DurakViewModel.OfflineDeckOption.DECK_36 to "36",
+                    com.example.viewmodel.DurakViewModel.OfflineDeckOption.DECK_52 to "52",
+                    com.example.viewmodel.DurakViewModel.OfflineDeckOption.CUSTOM to (if (appLanguage == AppLanguage.RU) "Своя 🛠️" else if (appLanguage == AppLanguage.IT) "Pers. 🛠️" else "Custom 🛠️")
+                ).forEach { (option, label) ->
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(if (deckOption == option) MaterialTheme.colorScheme.primary else Color.Transparent)
+                            .clickable { viewModel.setOfflineDeckOption(option) }
+                            .padding(vertical = 14.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = label,
+                            color = if (deckOption == option) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp
+                        )
+                    }
+                }
+            }
+
+            if (deckOption == com.example.viewmodel.DurakViewModel.OfflineDeckOption.CUSTOM) {
+                Spacer(modifier = Modifier.height(10.dp))
+                Button(
+                    onClick = { viewModel.navigateTo(com.example.viewmodel.DurakViewModel.Screen.CUSTOM_DECK) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.2f),
+                        contentColor = MaterialTheme.colorScheme.onSurface
+                    ),
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Icon(imageVector = Icons.Default.Settings, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = if (appLanguage == AppLanguage.RU) "Настроить колоду" else if (appLanguage == AppLanguage.IT) "Configura mazzo" else "Configure Custom Deck",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold
                     )
                 }
             }
@@ -1111,19 +1355,28 @@ fun GameTableScreen(viewModel: DurakViewModel) {
     var rootLayoutCoordinates by remember { mutableStateOf<LayoutCoordinates?>(null) }
     val cardPositions = remember { mutableStateMapOf<String, Offset>() }
     var activeDraggedCard by remember { mutableStateOf<Card?>(null) }
+    var isDragging by remember { mutableStateOf(false) }
     var dragOffsetX by remember { mutableStateOf(0f) }
     var dragOffsetY by remember { mutableStateOf(0f) }
 
     val animatedDragOffsetX by animateFloatAsState(
-        targetValue = dragOffsetX,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessHigh),
+        targetValue = if (isDragging) dragOffsetX else 0f,
+        animationSpec = if (isDragging) {
+            androidx.compose.animation.core.snap()
+        } else {
+            spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessHigh)
+        },
         label = "DragX"
     )
     val animatedDragOffsetY by animateFloatAsState(
-        targetValue = dragOffsetY,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessHigh),
+        targetValue = if (isDragging) dragOffsetY else 0f,
+        animationSpec = if (isDragging) {
+            androidx.compose.animation.core.snap()
+        } else {
+            spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessHigh)
+        },
         finishedListener = { value ->
-            if (value == 0f && dragOffsetX == 0f) {
+            if (value == 0f && !isDragging) {
                 activeDraggedCard = null
             }
         },
@@ -1631,6 +1884,7 @@ fun GameTableScreen(viewModel: DurakViewModel) {
                                     detectDragGestures(
                                         onDragStart = { offset ->
                                             activeDraggedCard = card
+                                            isDragging = true
                                             dragOffsetX = 0f
                                             dragOffsetY = 0f
                                         },
@@ -1648,28 +1902,28 @@ fun GameTableScreen(viewModel: DurakViewModel) {
                                             val currentCardY = origPos.y + dragOffsetY
 
                                             val isOverTransferZone = canPlayerTransferNow && transferZoneBounds?.let { bounds ->
-                                                currentCardX >= bounds.left - 50 && currentCardX <= bounds.right + 50 &&
-                                                currentCardY >= bounds.top - 100 && currentCardY <= bounds.bottom + 100
+                                                currentCardX >= bounds.left - 80 && currentCardX <= bounds.right + 80 &&
+                                                currentCardY >= bounds.top - 120 && currentCardY <= bounds.bottom + 120
                                             } ?: false
 
                                             if (isOverTransferZone) {
                                                 viewModel.playCard(card, intentTransferOnly = true)
+                                                isDragging = false
                                                 activeDraggedCard = null
                                                 dragOffsetX = 0f
                                                 dragOffsetY = 0f
                                             } else if (dragYDp < -100f) {
                                                 viewModel.playCard(card)
+                                                isDragging = false
                                                 activeDraggedCard = null
                                                 dragOffsetX = 0f
                                                 dragOffsetY = 0f
                                             } else {
-                                                dragOffsetX = 0f
-                                                dragOffsetY = 0f
+                                                isDragging = false
                                             }
                                         },
                                         onDragCancel = {
-                                            dragOffsetX = 0f
-                                            dragOffsetY = 0f
+                                            isDragging = false
                                         }
                                     )
                                 }
@@ -1859,6 +2113,67 @@ fun GameTableScreen(viewModel: DurakViewModel) {
                             }
                         }
                     }
+                }
+            }
+        }
+
+        if (canPlayerTransferNow && activeDraggedCard != null && snapshot.tablePairs.any { it.attackCard.rank == activeDraggedCard!!.rank }) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .size(190.dp, 240.dp)
+                    .zIndex(600f) // HIGH ABOVE TABLE & BUTTONS
+                    .clip(RoundedCornerShape(24.dp))
+                    .background(Color(0xE62A0D10)) // Semitransparent dark crimson
+                    .border(
+                        width = 2.dp,
+                        brush = Brush.linearGradient(
+                            listOf(Color(0xFFFF5D5D), Color(0xFFFF1111))
+                        ),
+                        shape = RoundedCornerShape(24.dp)
+                    )
+                    .onGloballyPositioned { coordinates ->
+                        rootLayoutCoordinates?.let { root ->
+                            if (root.isAttached && coordinates.isAttached) {
+                                val rootPos = root.localPositionOf(coordinates, Offset.Zero)
+                                transferZoneBounds = Rect(
+                                    left = rootPos.x,
+                                    top = rootPos.y,
+                                    right = rootPos.x + coordinates.size.width,
+                                    bottom = rootPos.y + coordinates.size.height
+                                )
+                            }
+                        }
+                    }
+                    .padding(16.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.SwapHoriz,
+                        contentDescription = null,
+                        tint = Color(0xFFFF5D5D),
+                        modifier = Modifier.size(52.dp)
+                    )
+                    Spacer(modifier = Modifier.height(14.dp))
+                    Text(
+                        text = if (appLanguage == AppLanguage.RU) "ПЕРЕВОД ХОДА" else if (appLanguage == AppLanguage.IT) "TRASFERISCI" else "TRANSFER ATTACK",
+                        color = Color.White,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Black,
+                        textAlign = TextAlign.Center
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = if (appLanguage == AppLanguage.RU) "Отпустите карту здесь" else if (appLanguage == AppLanguage.IT) "Rilascia la carta qui" else "Release card here",
+                        color = Color.White.copy(alpha = 0.62f),
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center
+                    )
                 }
             }
         }
@@ -2207,6 +2522,221 @@ fun StatsBoardScreen(viewModel: DurakViewModel, statsList: List<GameStat>) {
                 shape = RoundedCornerShape(16.dp)
             ) {
                 Text(text = viewModel.getString("BACK"))
+            }
+        }
+    }
+}
+
+@Composable
+fun CustomDeckSelectionScreen(viewModel: DurakViewModel) {
+    val currentSelectedCards by viewModel.customDeckIds.collectAsStateWithLifecycle()
+    val appLanguage by viewModel.appLanguage.collectAsStateWithLifecycle()
+
+    val fullStandardDeck = remember {
+        val list = mutableListOf<Card>()
+        for (suit in Suit.values()) {
+            for (rank in Rank.values()) {
+                list.add(Card(suit, rank))
+            }
+        }
+        list.sortedWith(compareBy({ it.suit }, { it.rank.value }))
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+            .statusBarsPadding()
+            .navigationBarsPadding()
+            .padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.SpaceBetween
+    ) {
+        // TOP: One UI 8.x Header with back button
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(
+                onClick = { viewModel.navigateTo(DurakViewModel.Screen.OFFLINE_SETUP) },
+                modifier = Modifier.background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.ArrowBack,
+                    contentDescription = "Back",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Spacer(modifier = Modifier.width(16.dp))
+            Column {
+                Text(
+                    text = if (appLanguage == AppLanguage.RU) "Конструктор колоды" else if (appLanguage == AppLanguage.IT) "Mazzo personalizzato" else "Custom Deck Builder",
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Black,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+                Text(
+                    text = if (appLanguage == AppLanguage.RU) "Выберите карты для игры" else if (appLanguage == AppLanguage.IT) "Seleziona le carte per giocare" else "Choose the cards to play with",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // CENTER: The Overlapping Card Carousel occupying the center strictly
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth(),
+            contentAlignment = Alignment.Center
+        ) {
+            LazyRow(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 12.dp)
+                    .testTag("custom_deck_carousel"),
+                horizontalArrangement = Arrangement.spacedBy((-42).dp),
+                contentPadding = PaddingValues(horizontal = 48.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                items(fullStandardDeck) { card ->
+                    val isSelected = currentSelectedCards.contains(card.id)
+                    
+                    Box(
+                        modifier = Modifier
+                            .graphicsLayer {
+                                // Add subtle depth based on selection
+                                scaleX = if (isSelected) 1.05f else 0.95f
+                                scaleY = if (isSelected) 1.05f else 0.95f
+                            }
+                            .offset(y = if (isSelected) (-20).dp else 0.dp)
+                            .shadow(
+                                elevation = if (isSelected) 10.dp else 2.dp,
+                                shape = RoundedCornerShape(14.dp)
+                            )
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(Color.White)
+                            .clickable {
+                                viewModel.toggleCustomDeckCard(card.id)
+                            }
+                            .border(
+                                width = if (isSelected) 2.5.dp else 1.dp,
+                                color = if (isSelected) MaterialTheme.colorScheme.primary else Color.Black.copy(alpha = 0.08f),
+                                shape = RoundedCornerShape(14.dp)
+                            )
+                            .size(80.dp, 120.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        val displayColor = if (card.suit.colorRed) SuitRed else SuitBlack
+                        
+                        // Corner Indicator (Top Left)
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(6.dp)
+                        ) {
+                            Column(
+                                modifier = Modifier.align(Alignment.TopStart),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Text(
+                                    text = card.rank.symbol,
+                                    color = displayColor,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Black,
+                                    lineHeight = 14.sp
+                                )
+                                Text(
+                                    text = card.suit.symbol,
+                                    color = displayColor,
+                                    fontSize = 10.sp,
+                                    lineHeight = 10.sp
+                                )
+                            }
+                            
+                            // Center symbol (large)
+                            Text(
+                                text = card.suit.symbol,
+                                color = displayColor.copy(alpha = 0.15f),
+                                fontSize = 48.sp,
+                                modifier = Modifier.align(Alignment.Center)
+                            )
+                            
+                            // Selection overlays: custom checkmark
+                            if (isSelected) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(18.dp)
+                                        .background(MaterialTheme.colorScheme.primary, CircleShape)
+                                        .align(Alignment.TopEnd),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Check,
+                                        contentDescription = "Selected",
+                                        tint = MaterialTheme.colorScheme.onPrimary,
+                                        modifier = Modifier.size(12.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // BOTTOM: Status and Action controllers
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+                ),
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(14.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = if (appLanguage == AppLanguage.RU) "Карт выбрано: ${currentSelectedCards.size}" else if (appLanguage == AppLanguage.IT) "Carte selezionate: ${currentSelectedCards.size}" else "Selected: ${currentSelectedCards.size} cards",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Text(
+                        text = if (appLanguage == AppLanguage.RU) "Необходимо минимум 12 карт для полноценного раунда" else if (appLanguage == AppLanguage.IT) "Minimo 12 carte necessarie per giocare" else "Requires at least 12 cards to host a proper round.",
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+
+            Button(
+                onClick = { viewModel.navigateTo(DurakViewModel.Screen.OFFLINE_SETUP) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp)
+                    .testTag("confirm_custom_deck_btn"),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary
+                ),
+                shape = RoundedCornerShape(20.dp)
+            ) {
+                Text(
+                    text = if (appLanguage == AppLanguage.RU) "Подтвердить колоду" else if (appLanguage == AppLanguage.IT) "Conferma mazzo" else "Confirm Deck Configuration",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold
+                )
             }
         }
     }

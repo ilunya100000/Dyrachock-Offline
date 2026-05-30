@@ -353,7 +353,7 @@ fun MainMenuScreen(viewModel: DurakViewModel, statsList: List<GameStat>) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "0.2-pre2",
+                    text = "0.2-pre3",
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f)
@@ -753,7 +753,7 @@ fun OfflineSetupScreen(viewModel: DurakViewModel) {
             }
 
             Text(
-                text = if (appLanguage == AppLanguage.RU) "Режим Игры" else if (appLanguage == AppLanguage.IT) "Modalità" else "Game Variant",
+                text = if (appLanguage == AppLanguage.RU) "Режим игры" else if (appLanguage == AppLanguage.IT) "Modalità di gioco" else "Game mode",
                 fontSize = 15.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
@@ -795,7 +795,7 @@ fun OfflineSetupScreen(viewModel: DurakViewModel) {
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = if (appLanguage == AppLanguage.RU) "Переводной (Beta)" else if (appLanguage == AppLanguage.IT) "Trasferimento" else "Passing (Beta)",
+                        text = if (appLanguage == AppLanguage.RU) "Переводной" else if (appLanguage == AppLanguage.IT) "Trasferimento" else "Passing",
                         color = if (subMode == com.example.viewmodel.DurakViewModel.OfflineSubMode.TRANSFER) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
                         fontWeight = FontWeight.Bold,
                         fontSize = 14.sp
@@ -1069,8 +1069,65 @@ fun MultiplayerHubScreen(viewModel: DurakViewModel) {
                         Spacer(modifier = Modifier.height(20.dp))
 
                         // ADVANCED CREATION OPTIONS (Only selectable if we haven't started hosting yet!)
-                        val selectedDeckSize by viewModel.mpLobbyDeckSize.collectAsStateWithLifecycle()
-                        val selectedPlayersCount by viewModel.mpLobbyPlayersCount.collectAsStateWithLifecycle()
+                        val selectedDeckOption by viewModel.mpLobbyDeckOption.collectAsStateWithLifecycle()
+
+                        // Multiplayer Game mode configuration block
+                        Text(
+                            text = if (appLanguage == AppLanguage.RU) "Режим игры" else if (appLanguage == AppLanguage.IT) "Modalità di gioco" else "Game mode",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                            modifier = Modifier.align(Alignment.Start)
+                        )
+
+                        Spacer(modifier = Modifier.height(6.dp))
+
+                        val mpSubMode by viewModel.mpLobbySubMode.collectAsStateWithLifecycle()
+                        val optionModeEnabled = networkState != MultiplayerManager.State.HOSTING
+
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                                .padding(4.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(if (mpSubMode == com.example.viewmodel.DurakViewModel.OfflineSubMode.CLASSIC) MaterialTheme.colorScheme.primary else Color.Transparent)
+                                    .clickable(enabled = optionModeEnabled) { viewModel.setMpLobbySubMode(com.example.viewmodel.DurakViewModel.OfflineSubMode.CLASSIC) }
+                                    .padding(vertical = 10.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = if (appLanguage == AppLanguage.RU) "Классический" else if (appLanguage == AppLanguage.IT) "Classico" else "Classic",
+                                    color = if (mpSubMode == com.example.viewmodel.DurakViewModel.OfflineSubMode.CLASSIC) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 12.sp
+                                )
+                            }
+
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(if (mpSubMode == com.example.viewmodel.DurakViewModel.OfflineSubMode.TRANSFER) MaterialTheme.colorScheme.primary else Color.Transparent)
+                                    .clickable(enabled = optionModeEnabled) { viewModel.setMpLobbySubMode(com.example.viewmodel.DurakViewModel.OfflineSubMode.TRANSFER) }
+                                    .padding(vertical = 10.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = if (appLanguage == AppLanguage.RU) "Переводной" else if (appLanguage == AppLanguage.IT) "Trasferimento" else "Passing",
+                                    color = if (mpSubMode == com.example.viewmodel.DurakViewModel.OfflineSubMode.TRANSFER) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 12.sp
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
 
                         Text(
                             text = if (appLanguage == AppLanguage.RU) "Размер колоды" else if (appLanguage == AppLanguage.IT) "Dimensione mazzo" else "Deck Size",
@@ -1089,80 +1146,92 @@ fun MultiplayerHubScreen(viewModel: DurakViewModel) {
                                 .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
                                 .padding(4.dp)
                         ) {
-                            val optionDeck36Enabled = networkState != MultiplayerManager.State.HOSTING
-                            Box(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(if (selectedDeckSize == 36) MaterialTheme.colorScheme.primary else Color.Transparent)
-                                    .clickable(enabled = optionDeck36Enabled) { viewModel.setMpLobbyDeckSize(36) }
-                                    .padding(vertical = 10.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = "36 (6 - A)",
-                                    color = if (selectedDeckSize == 36) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 12.sp
-                                )
+                            val optionDeckEnabled = networkState != MultiplayerManager.State.HOSTING
+                            listOf(
+                                com.example.viewmodel.DurakViewModel.OfflineDeckOption.DECK_36 to "36",
+                                com.example.viewmodel.DurakViewModel.OfflineDeckOption.DECK_52 to "52",
+                                com.example.viewmodel.DurakViewModel.OfflineDeckOption.CUSTOM to (if (appLanguage == AppLanguage.RU) "Своя 🛠️" else if (appLanguage == AppLanguage.IT) "Pers. 🛠️" else "Custom 🛠️")
+                            ).forEach { (option, label) ->
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(if (selectedDeckOption == option) MaterialTheme.colorScheme.primary else Color.Transparent)
+                                        .clickable(enabled = optionDeckEnabled) { viewModel.setMpLobbyDeckOption(option) }
+                                        .padding(vertical = 10.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = label,
+                                        color = if (selectedDeckOption == option) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 12.sp
+                                    )
+                                }
                             }
+                        }
 
-                            Box(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(if (selectedDeckSize == 52) MaterialTheme.colorScheme.primary else Color.Transparent)
-                                    .clickable(enabled = optionDeck36Enabled) { viewModel.setMpLobbyDeckSize(52) }
-                                    .padding(vertical = 10.dp),
-                                contentAlignment = Alignment.Center
+                        if (selectedDeckOption == com.example.viewmodel.DurakViewModel.OfflineDeckOption.CUSTOM) {
+                            Spacer(modifier = Modifier.height(10.dp))
+                            Button(
+                                onClick = { viewModel.navigateTo(com.example.viewmodel.DurakViewModel.Screen.CUSTOM_DECK) },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                                ),
+                                shape = RoundedCornerShape(12.dp),
+                                modifier = Modifier.fillMaxWidth()
                             ) {
-                                Text(
-                                    text = "52 (2 - A)",
-                                    color = if (selectedDeckSize == 52) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 12.sp
-                                )
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Icon(imageVector = Icons.Default.Settings, contentDescription = null, modifier = Modifier.size(16.dp))
+                                    Text(
+                                        text = if (appLanguage == AppLanguage.RU) "Настроить колоду" else if (appLanguage == AppLanguage.IT) "Configura mazzo" else "Configure Custom Deck",
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 13.sp
+                                    )
+                                }
                             }
                         }
 
                         Spacer(modifier = Modifier.height(16.dp))
 
-                        Text(
-                            text = if (appLanguage == AppLanguage.RU) "Количество игроков" else if (appLanguage == AppLanguage.IT) "Max Giocatori" else "Max Players",
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                            modifier = Modifier.align(Alignment.Start)
-                        )
+                        val noticeText = if (appLanguage == AppLanguage.RU) {
+                            "Больше двух игроков в разработке"
+                        } else if (appLanguage == AppLanguage.IT) {
+                            "Più di due giocatori in sviluppo"
+                        } else {
+                            "More than two players in development"
+                        }
 
-                        Spacer(modifier = Modifier.height(6.dp))
-
-                        Row(
+                        Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clip(RoundedCornerShape(16.dp))
-                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-                                .padding(4.dp),
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.2f))
+                                .border(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.3f), RoundedCornerShape(12.dp))
+                                .padding(vertical = 12.dp, horizontal = 16.dp),
+                            contentAlignment = Alignment.Center
                         ) {
-                            val optionPlayersEnabled = networkState != MultiplayerManager.State.HOSTING
-                            for (pCount in 2..6) {
-                                Box(
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .clip(RoundedCornerShape(12.dp))
-                                        .background(if (selectedPlayersCount == pCount) MaterialTheme.colorScheme.secondary else Color.Transparent)
-                                        .clickable(enabled = optionPlayersEnabled) { viewModel.setMpLobbyPlayersCount(pCount) }
-                                        .padding(vertical = 10.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        text = pCount.toString(),
-                                        color = if (selectedPlayersCount == pCount) MaterialTheme.colorScheme.onSecondary else MaterialTheme.colorScheme.onSurface,
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 13.sp
-                                    )
-                                }
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Info,
+                                    contentDescription = "info",
+                                    tint = MaterialTheme.colorScheme.error,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Text(
+                                    text = noticeText,
+                                    color = MaterialTheme.colorScheme.onErrorContainer,
+                                    fontWeight = FontWeight.Medium,
+                                    fontSize = 12.sp,
+                                    textAlign = TextAlign.Center
+                                )
                             }
                         }
 

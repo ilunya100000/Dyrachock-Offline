@@ -116,14 +116,21 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
     val botThinking = _botThinking.asStateFlow()
 
     // MP Lobby Custom Configuration
-    private val _mpLobbyDeckSize = MutableStateFlow(36)
-    val mpLobbyDeckSize = _mpLobbyDeckSize.asStateFlow()
+    private val _mpLobbyDeckOption = MutableStateFlow(OfflineDeckOption.DECK_36)
+    val mpLobbyDeckOption = _mpLobbyDeckOption.asStateFlow()
+
+    private val _mpLobbySubMode = MutableStateFlow(OfflineSubMode.CLASSIC)
+    val mpLobbySubMode = _mpLobbySubMode.asStateFlow()
 
     private val _mpLobbyPlayersCount = MutableStateFlow(2)
     val mpLobbyPlayersCount = _mpLobbyPlayersCount.asStateFlow()
 
-    fun setMpLobbyDeckSize(size: Int) {
-        _mpLobbyDeckSize.value = size
+    fun setMpLobbyDeckOption(option: OfflineDeckOption) {
+        _mpLobbyDeckOption.value = option
+    }
+
+    fun setMpLobbySubMode(subMode: OfflineSubMode) {
+        _mpLobbySubMode.value = subMode
     }
 
     enum class OfflineSubMode {
@@ -209,7 +216,7 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
         "STATUS_TITLE_LABEL" to "Sound Update",
         "CHANGELOG_BTN" to "Changelog",
         "CHANGELOG_TITLE" to "Version Changelog",
-        "CHANGELOG_TEXT" to "Version 0.2-pre2\n\n• Italian Leaves Beta: Full localization is now officially released.\n• Russian by Default: Switched the default application language.\n• Custom Deck Builder Fixed: Cards can now be freely scrolled and managed.",
+        "CHANGELOG_TEXT" to "Version 0.2-pre3\n\n• Release of \"Transfer Durak\": It is now also available in multiplayer mode.\n• Multiplayer Mode Updates: Playing with more than two players is disabled, Transfer Durak is fully supported, and custom deck configurations can now be used.",
         "BOT_DECENT_TITLE" to "DECENT AMATEUR BOT",
         "BOT_DECENT_DESC" to "Plays casual valid combinations. Excellent for beginners looking to learn basic durak card sequencing.",
         "BOT_AI_TITLE" to "AI ANALYTICAL BOT",
@@ -258,7 +265,7 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
         "STATUS_TITLE_LABEL" to "Музыкальное обновление",
         "CHANGELOG_BTN" to "Изменения",
         "CHANGELOG_TITLE" to "История изменений",
-        "CHANGELOG_TEXT" to "Версия 0.2-pre2\n\n• Выход итальянского языка из беты: Локализация полностью готова.\n• Русский по умолчанию: Изменен дефолтный язык приложения.\n• Исправлен баг в конструкторе колоды: Карты теперь можно свободно пролистывать и перемещать.",
+        "CHANGELOG_TEXT" to "Версия 0.2-pre3\n\n• Релиз \"Переводного дурака\": Теперь он также доступен в многопользовательском режиме.\n• Изменения в многопользовательском режиме: Теперь нельзя играть больше чем вдвоем, доступен режим \"Переводного дурака\" и новые кастомные варианты колоды.",
         "BOT_DECENT_TITLE" to "ЛЮБИТЕЛЬСКИЙ БОТ",
         "BOT_DECENT_DESC" to "Разыгрывает простые допустимые комбинации. Отлично подходит для начинающих, желающих освоить базовый порядок карт в дураке.",
         "BOT_AI_TITLE" to "АНАЛИТИЧЕСКИЙ ИИ-БОТ",
@@ -307,7 +314,7 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
         "STATUS_TITLE_LABEL" to "Aggiornamento audio",
         "CHANGELOG_BTN" to "Registro",
         "CHANGELOG_TITLE" to "Registro Modifiche",
-        "CHANGELOG_TEXT" to "Versione 0.2-pre2\n\n• Italiano fuori dalla Beta: La localizzazione completa è ora ufficiale.\n• Russo come impostazione predefinita: Sostituita la lingua di default.\n• Costruttore di mazzo corretto: Le carte ora possono essere scorse e gestite liberamente.",
+        "CHANGELOG_TEXT" to "Versione 0.2-pre3\n\n• Rilascio di \"Durak del Trasferimento\": ora disponibile anche in modalità multiplayer.\n• Modifiche alla modalità multiplayer: non è più possibile giocare con più di due giocatori, è disponibile il Durak del Trasferimento e si possono configurare mazzi personalizzati.",
         "BOT_DECENT_TITLE" to "BOT AMATORIALE",
         "BOT_DECENT_DESC" to "Gioca combinazioni semplici e valide. Ottimo per i principianti che vogliono imparare la sequenza base delle carte del durak.",
         "BOT_AI_TITLE" to "BOT ANALITICO IA",
@@ -388,7 +395,18 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
                     // Initialize game and send immediately
                     delay(300) // gentle networking stabilization delay
                     hasPersistedThisGame = false
-                    engine.startMatch("Host", "Guest", isBotGame = false, deckSize = _mpLobbyDeckSize.value)
+                    val deckOption = _mpLobbyDeckOption.value
+                    val deckSize = if (deckOption == OfflineDeckOption.DECK_52) 52 else 36
+                    val customDeck = if (deckOption == OfflineDeckOption.CUSTOM) _customDeckIds.value else null
+                    val transferEnabled = (_mpLobbySubMode.value == OfflineSubMode.TRANSFER)
+                    engine.startMatch(
+                        player1Name = "Host",
+                        player2Name = "Guest",
+                        isBotGame = false,
+                        deckSize = deckSize,
+                        isTransferMode = transferEnabled,
+                        customDeckIds = customDeck
+                    )
                     pushHostStateToClient()
                     _currentScreen.value = Screen.GAME_TABLE
                 }

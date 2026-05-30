@@ -353,7 +353,7 @@ fun MainMenuScreen(viewModel: DurakViewModel, statsList: List<GameStat>) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "0.2-pre4",
+                    text = "0.2-pre5",
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f)
@@ -1057,7 +1057,52 @@ fun MultiplayerHubScreen(viewModel: DurakViewModel) {
                 }
             }
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Card(
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                ),
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    val currentNickname by viewModel.playerNickname.collectAsStateWithLifecycle()
+                    Icon(
+                        imageVector = Icons.Default.Person,
+                        contentDescription = "nickname",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    OutlinedTextField(
+                        value = currentNickname,
+                        onValueChange = { viewModel.setPlayerNickname(it) },
+                        maxLines = 1,
+                        singleLine = true,
+                        label = {
+                            Text(
+                                text = if (appLanguage == AppLanguage.RU) "Ваш никнейм" 
+                                       else if (appLanguage == AppLanguage.UA) "Ваш нікнейм" 
+                                       else if (appLanguage == AppLanguage.IT) "Tuo Nickname" 
+                                       else "Your Nickname",
+                                fontSize = 11.sp
+                            )
+                        },
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(10.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+                        )
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
 
             if (activeTabHost) {
                 // PANEL: HOSTING CONFIG
@@ -1467,16 +1512,22 @@ fun GameTableScreen(viewModel: DurakViewModel) {
     val canPlayerTransferNow = isTransferEnabled && 
             snapshot.tablePairs.isNotEmpty() && 
             snapshot.tablePairs.all { it.defenseCard == null } &&
-            (if (activeMode == GameMode.ONLINE_CLIENT) snapshot.attackerPlayerId == "player" else snapshot.attackerPlayerId == "opponent")
+            (if (activeMode == GameMode.ONLINE_CLIENT) snapshot.attackerPlayerId == "player" else snapshot.attackerPlayerId == "opponent") &&
+            snapshot.opponentHandSize >= snapshot.tablePairs.size + 1
 
     var showLogs by remember { mutableStateOf(false) }
 
     var rootLayoutCoordinates by remember { mutableStateOf<LayoutCoordinates?>(null) }
     val cardPositions = remember { mutableStateMapOf<String, Offset>() }
+    val tableCardBounds = remember { mutableStateMapOf<String, androidx.compose.ui.geometry.Rect>() }
     var activeDraggedCard by remember { mutableStateOf<Card?>(null) }
     var isDragging by remember { mutableStateOf(false) }
     var dragOffsetX by remember { mutableStateOf(0f) }
     var dragOffsetY by remember { mutableStateOf(0f) }
+
+    LaunchedEffect(snapshot.tablePairs) {
+        tableCardBounds.clear()
+    }
 
     val animatedDragOffsetX by animateFloatAsState(
         targetValue = if (isDragging) dragOffsetX else 0f,
@@ -1733,6 +1784,20 @@ fun GameTableScreen(viewModel: DurakViewModel) {
                                                             modifier = Modifier
                                                                 .align(Alignment.TopStart)
                                                                 .size(70.dp, 102.dp)
+                                                                .onGloballyPositioned { coordinates ->
+                                                                    rootLayoutCoordinates?.let { root ->
+                                                                        if (root.isAttached && coordinates.isAttached) {
+                                                                            val localOffset = root.localPositionOf(coordinates, Offset.Zero)
+                                                                            val size = coordinates.size
+                                                                            tableCardBounds[pair.attackCard.id] = androidx.compose.ui.geometry.Rect(
+                                                                                localOffset.x,
+                                                                                localOffset.y,
+                                                                                localOffset.x + size.width,
+                                                                                localOffset.y + size.height
+                                                                            )
+                                                                        }
+                                                                    }
+                                                                }
                                                         )
 
                                                         // Overlap card (The defensive card, if beat)
@@ -2111,13 +2176,37 @@ fun GameTableScreen(viewModel: DurakViewModel) {
                                                     val currentCardX = origPos.x + dragOffsetX
                                                     val currentCardY = origPos.y + dragOffsetY
 
+                                                    val cardWidthPx = with(currentDensity) { cardWidth.toPx() }
+                                                    val cardHeightPx = with(currentDensity) { cardHeight.toPx() }
+                                                    val centerX = currentCardX + cardWidthPx / 2f
+                                                    val centerY = currentCardY + cardHeightPx / 2f
+
                                                     val isOverTransferZone = canPlayerTransferNow && transferZoneBounds?.let { bounds ->
                                                         currentCardX >= bounds.left - 80 && currentCardX <= bounds.right + 80 &&
                                                         currentCardY >= bounds.top - 120 && currentCardY <= bounds.bottom + 120
                                                     } ?: false
 
+                                                    // Find if the dragged card is dropped on any undefended attack card on the table
+                                                    val overlappedAttackCardId = tableCardBounds.entries.filter { entry ->
+                                                        snapshot.tablePairs.any { it.attackCard.id == entry.key && it.defenseCard == null }
+                                                    }.find { entry ->
+                                                        val rect = entry.value
+                                                        centerX >= rect.left - 40 && centerX <= rect.right + 40 &&
+                                                        centerY >= rect.top - 60 && centerY <= rect.bottom + 60
+                                                    }?.key
+
+                                                    val targetAttackCard = if (overlappedAttackCardId != null) {
+                                                        snapshot.tablePairs.find { it.attackCard.id == overlappedAttackCardId }?.attackCard
+                                                    } else null
+
                                                     if (isOverTransferZone) {
                                                         viewModel.playCard(card, intentTransferOnly = true)
+                                                        isDragging = false
+                                                        activeDraggedCard = null
+                                                        dragOffsetX = 0f
+                                                        dragOffsetY = 0f
+                                                    } else if (targetAttackCard != null) {
+                                                        viewModel.playCard(card, targetAttackCard = targetAttackCard)
                                                         isDragging = false
                                                         activeDraggedCard = null
                                                         dragOffsetX = 0f

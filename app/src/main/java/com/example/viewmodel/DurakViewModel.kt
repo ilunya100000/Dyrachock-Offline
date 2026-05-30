@@ -198,10 +198,14 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
         "LOST_TITLE" to "DEFEAT! YOU ARE THE DURAK!",
         "DRAW_TITLE" to "DRAW GAME!",
         "DISC_TITLE" to "Opponent disconnected!",
-        "STATUS_TITLE_LABEL" to "Animation Update. The Final Version",
+        "STATUS_TITLE_LABEL" to "Sound Update",
         "CHANGELOG_BTN" to "Changelog",
         "CHANGELOG_TITLE" to "Version Changelog",
-        "CHANGELOG_TEXT" to "Version 0.1.2_02 (Micro Patch)\n\n• Fanned Player Deck & Physics: All active hand cards are now aligned in a beautiful, space-efficient fanned format. Dragging horizontally on any card sifts/scrolls the entire hand, and dragging any card upwards pulls it out to play.\n• Custom Deck & UI Refinements: Enhanced scrolling consistency and updated the build metadata structure."
+        "CHANGELOG_TEXT" to "Version 0.2-pre1\n\n• Localized Bot Descriptions: Detailed AI difficulty insight in English, Russian, and Italian.\n• Screen Orientation Lock: The game is now locked to Portrait mode for consistent touch and drag mechanics.\n• Improved Transfer Rules: Trump cards are fully transferable in Transfer Durak mode.\n• Multiplayer Hotfix: Resolved critical synchronization issues between host and guest players.",
+        "BOT_DECENT_TITLE" to "DECENT AMATEUR BOT",
+        "BOT_DECENT_DESC" to "Plays casual valid combinations. Excellent for beginners looking to learn basic durak card sequencing.",
+        "BOT_AI_TITLE" to "AI ANALYTICAL BOT",
+        "BOT_AI_DESC" to "Defends with cold calculation. Tracks all played cards, saves trumps for endgame clutches, and prioritizes strategic discard sequences."
     )
 
     private val ruTranslations = mapOf(
@@ -243,17 +247,25 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
         "LOST_TITLE" to "ПОРАЖЕНИЕ! ВЫ ДУРАК!",
         "DRAW_TITLE" to "НИЧЬЯ!",
         "DISC_TITLE" to "Игрок отключился!",
-        "STATUS_TITLE_LABEL" to "Анимационное обновление. Финальная версия",
+        "STATUS_TITLE_LABEL" to "Музыкальное обновление",
         "CHANGELOG_BTN" to "Изменения",
         "CHANGELOG_TITLE" to "История изменений",
-        "CHANGELOG_TEXT" to "Версия 0.1.2_02 (Микро Патч)\n\n• Веерная Колода Игрока: Карты в руке теперь отображаются в виде тактильного веера. Листание происходит свайпом влево/вправо по любой карте, а вертикальный свайп вверх вытягивает нужную карту на игровой стол.\n• Тонкая настройка интерфейса: Оптимизирована плавная прокрутка конструктора колоды и исправлены метаданные сборки."
+        "CHANGELOG_TEXT" to "Версия 0.2-pre1\n\n• Локализация Описаний Ботов: Подробная информация об ИИ-сложности на русском, английском и итальянском языках.\n• Блокировка ориентации экрана: Приложение теперь строго зафиксировано в портретном режиме.\n• Перевод козырей: Козырные карты теперь можно переводить в режиме Переводного Дурака.\n• Исправление мультиплеера: Устранена критическая ошибка десинхронизации карт и ходов между хостом и клиентом.",
+        "BOT_DECENT_TITLE" to "ЛЮБИТЕЛЬСКИЙ БОТ",
+        "BOT_DECENT_DESC" to "Разыгрывает простые допустимые комбинации. Отлично подходит для начинающих, желающих освоить базовый порядок карт в дураке.",
+        "BOT_AI_TITLE" to "АНАЛИТИЧЕСКИЙ ИИ-БОТ",
+        "BOT_AI_DESC" to "Защищается с холодным расчетом. Отслеживает все сыгранные карты, бережет козыри для решающих моментов в конце игры и отдает приоритет стратегическому сбросу."
     )
 
     private val itTranslations = mapOf(
-        "STATUS_TITLE_LABEL" to "Aggiornamento animazioni. La versione finale",
+        "STATUS_TITLE_LABEL" to "Aggiornamento audio",
         "CHANGELOG_BTN" to "Registro",
         "CHANGELOG_TITLE" to "Registro Modifiche (Beta)",
-        "CHANGELOG_TEXT" to "Versione 0.1.2_02 (Micro Patch)\n\n• Mazzo a ventaglio del giocatore: Le carte nella mano del giocatore sono ora allineate a ventaglio. Scorrendo a sinistra o a destra su qualsiasi carta si fa scorrere l'intero mazzo, mentre trascinando una carta verso l'alto la si lancia sul tavolo.\n• Ottimizzazioni per mazzo personalizzato e interfaccia: Prestazioni migliorate e metadati aggiornati con precisione."
+        "CHANGELOG_TEXT" to "Versione 0.2-pre1\n\n• Descrizioni dei bot localizzate: Dettagli sull'intelligenza artificiale in inglese, russo e italiano.\n• Blocco dell'orientamento: Il gioco è ora bloccato in modalità verticale per garantire controlli fluidi.\n• Regole di trasferimento migliorate: I trionfi (carte d'atout) sono ora completamente trasferibili.\n• Risoluzione multiplayer: Corretto il bug critico di sincronizzazione delle carte per host e ospiti.",
+        "BOT_DECENT_TITLE" to "BOT AMATORIALE",
+        "BOT_DECENT_DESC" to "Gioca combinazioni semplici e valide. Ottimo per i principianti che vogliono imparare la sequenza base delle carte del durak.",
+        "BOT_AI_TITLE" to "BOT ANALITICO IA",
+        "BOT_AI_DESC" to "Difende con freddo calcolo. Tiene traccia di tutte le carte giocate, conserva i trionfi per le fasi finali e dà priorità a scarti strategici."
     )
 
     fun getString(key: String): String {
@@ -399,21 +411,36 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
             // Host plays card
             val isUserAttacking = (engine.attackerId == "player")
             if (isUserAttacking) {
-                if (engine.performAttack("player", card)) {
-                    pushHostStateToClient()
+                if (!intentTransferOnly) {
+                    if (engine.performAttack("player", card)) {
+                        pushHostStateToClient()
+                    }
                 }
             } else {
-                val undefendedPair = engine.tablePairs.find { it.defenseCard == null }
-                if (undefendedPair != null) {
-                    if (engine.performDefense("player", undefendedPair.attackCard, card)) {
+                val canTransfer = engine.isTransferMode && 
+                        engine.tablePairs.isNotEmpty() && 
+                        engine.tablePairs.all { it.defenseCard == null } &&
+                        engine.tablePairs.any { it.attackCard.rank == card.rank }
+
+                if (canTransfer && intentTransferOnly) {
+                    if (engine.performTransfer("player", card)) {
                         pushHostStateToClient()
+                    }
+                } else if (!intentTransferOnly) {
+                    val undefendedPair = engine.tablePairs.find { it.defenseCard == null }
+                    if (undefendedPair != null) {
+                        if (engine.performDefense("player", undefendedPair.attackCard, card)) {
+                            pushHostStateToClient()
+                        }
                     }
                 }
             }
         } else {
             // Client plays card (Submit intent action to Host)
             val isClientAttacking = (snapshot.attackerPlayerId == "opponent") // From client perspective, host is 'player' and attacker id means opponent is attacking (which is client)
-            val payload = if (isClientAttacking) {
+            val payload = if (intentTransferOnly) {
+                NetworkProtocol.encodeActionTransfer(card)
+            } else if (isClientAttacking) {
                 NetworkProtocol.encodeActionAttack(card)
             } else {
                 val undefendedPair = snapshot.tablePairs.find { it.defenseCard == null }
@@ -595,6 +622,13 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
                         if (attackCard != null && defenseCard != null && engine.performDefense("opponent", attackCard, defenseCard)) {
                             stateChanged = true
                         }
+                    }
+                }
+                msg.startsWith("ACTION_TRANSFER:") -> {
+                    val cardData = msg.replace("ACTION_TRANSFER:", "")
+                    val card = NetworkProtocol.decodeCard(cardData)
+                    if (card != null && engine.performTransfer("opponent", card)) {
+                        stateChanged = true
                     }
                 }
                 msg == "ACTION_TAKE" -> {

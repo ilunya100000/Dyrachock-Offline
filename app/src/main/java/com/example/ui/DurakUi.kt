@@ -352,7 +352,7 @@ fun MainMenuScreen(viewModel: DurakViewModel, statsList: List<GameStat>) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "0.1.2_02",
+                    text = "0.2-pre1",
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f)
@@ -885,7 +885,7 @@ fun OfflineSetupScreen(viewModel: DurakViewModel) {
             ) {
                 Column(modifier = Modifier.padding(20.dp)) {
                     Text(
-                        text = if (subMode == com.example.viewmodel.DurakViewModel.OfflineSubMode.TRANSFER) "TRANSFER RULES" else if (isHard) "AI ANALYTICAL BOT" else "DECENT AMATEUR BOT",
+                        text = if (subMode == com.example.viewmodel.DurakViewModel.OfflineSubMode.TRANSFER) "TRANSFER RULES" else if (isHard) viewModel.getString("BOT_AI_TITLE") else viewModel.getString("BOT_DECENT_TITLE"),
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.secondary,
@@ -896,13 +896,15 @@ fun OfflineSetupScreen(viewModel: DurakViewModel) {
                         text = if (subMode == com.example.viewmodel.DurakViewModel.OfflineSubMode.TRANSFER) {
                             if (appLanguage == AppLanguage.RU) {
                                 "Режим Переводного Дурака активирован! Вы или ИИ-бoт можете перевести защитную обязанность на оппонента, подкинув карту совпадающего достоинства. Бот умеет грамотно оценивать риски перевода."
+                            } else if (appLanguage == AppLanguage.IT) {
+                                "Regole del trasferimento applicate! Tu o il bot potete trasferire il turno di difesa accoppiando il valore della carta d'attacco. Il bot è ottimizzato per trasferire in modo tattico!"
                             } else {
                                 "Transfer rules applied! You or the bot can transfer defending duty by matching the rank of the attacking cards. The bot is fully optimized to transfer tactically!"
                             }
                         } else if (isHard) {
-                            "Defends with cold calculation. Tracks all played cards, saves trumps for endgame clutches, and prioritizes strategic discard sequences."
+                            viewModel.getString("BOT_AI_DESC")
                         } else {
-                            "Plays casual valid combinations. Excellent for beginners looking to learn basic durak card sequencing."
+                            viewModel.getString("BOT_DECENT_DESC")
                         },
                         fontSize = 14.sp,
                         lineHeight = 20.sp,

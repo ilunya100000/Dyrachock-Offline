@@ -58,25 +58,25 @@ object NetworkProtocol {
         val clientHandStr = clientHand.joinToString(";") { encodeCard(it) }
 
         return buildString {
-            append("TRUMP:").append(trumpStr).append("\n")
-            append("TRUMPSUIT:").append(trumpSuitStr).append("\n")
-            append("DECKSIZE:").append(deckSizeStr).append("\n")
-            append("DISCARDSIZE:").append(discardSizeStr).append("\n")
-            append("ATTACKERID:").append(attackerIdStr).append("\n")
-            append("MATCHSTATUS:").append(matchStatusStr).append("\n")
-            append("LOGS:").append(logsStr).append("\n")
-            append("LOGSEN:").append(logsEnStr).append("\n")
-            append("LOGSRU:").append(logsRuStr).append("\n")
-            append("TABLE:").append(tablePairsStr).append("\n")
-            append("HOST_HAND:").append(hostHandStr).append("\n")
-            append("CLIENT_HAND:").append(clientHandStr).append("\n")
+            append("TRUMP:").append(trumpStr).append("##")
+            append("TRUMPSUIT:").append(trumpSuitStr).append("##")
+            append("DECKSIZE:").append(deckSizeStr).append("##")
+            append("DISCARDSIZE:").append(discardSizeStr).append("##")
+            append("ATTACKERID:").append(attackerIdStr).append("##")
+            append("MATCHSTATUS:").append(matchStatusStr).append("##")
+            append("LOGS:").append(logsStr).append("##")
+            append("LOGSEN:").append(logsEnStr).append("##")
+            append("LOGSRU:").append(logsRuStr).append("##")
+            append("TABLE:").append(tablePairsStr).append("##")
+            append("HOST_HAND:").append(hostHandStr).append("##")
+            append("CLIENT_HAND:").append(clientHandStr)
         }
     }
 
     // Decodes a serialized screen state back into a usable form
     // Let's return a map or a structured packet
     fun deserializeState(payload: String): StatePayload? {
-        val lines = payload.split("\n")
+        val lines = payload.split("##")
         val map = mutableMapOf<String, String>()
         for (line in lines) {
             val idx = line.indexOf(":")
@@ -157,6 +157,7 @@ object NetworkProtocol {
     // Represented by clean formatted strings "ACTION_ATTACK:card" or "ACTION_DEFEND:attack_card|defend_card"
     fun encodeActionAttack(card: Card): String = "ACTION_ATTACK:${encodeCard(card)}"
     fun encodeActionDefend(attackCard: Card, defenseCard: Card): String = "ACTION_DEFEND:${encodeCard(attackCard)}|${encodeCard(defenseCard)}"
+    fun encodeActionTransfer(card: Card): String = "ACTION_TRANSFER:${encodeCard(card)}"
     fun encodeActionTake(): String = "ACTION_TAKE"
     fun encodeActionBito(): String = "ACTION_BITO"
 }

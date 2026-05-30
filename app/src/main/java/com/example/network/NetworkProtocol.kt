@@ -69,7 +69,8 @@ object NetworkProtocol {
             append("LOGSRU:").append(logsRuStr).append("##")
             append("TABLE:").append(tablePairsStr).append("##")
             append("HOST_HAND:").append(hostHandStr).append("##")
-            append("CLIENT_HAND:").append(clientHandStr)
+            append("CLIENT_HAND:").append(clientHandStr).append("##")
+            append("ISTRANSFER:").append(snapshot.isTransferMode.toString())
         }
     }
 
@@ -119,6 +120,8 @@ object NetworkProtocol {
                 clientHandRaw.split(";").mapNotNull { decodeCard(it) }
             }
 
+            val isTransferMode = map["ISTRANSFER"]?.toBooleanStrictOrNull() ?: false
+
             return StatePayload(
                 trumpCard = trumpCard,
                 trumpSuit = trumpSuit,
@@ -131,7 +134,8 @@ object NetworkProtocol {
                 gameLogRu = logsRu,
                 tablePairs = tablePairs,
                 hostHand = hostHand,
-                clientHand = clientHand
+                clientHand = clientHand,
+                isTransferMode = isTransferMode
             )
         } catch (e: Exception) {
             return null
@@ -150,7 +154,8 @@ object NetworkProtocol {
         val gameLogRu: List<String>,
         val tablePairs: List<CardPair>,
         val hostHand: List<Card>,
-        val clientHand: List<Card>
+        val clientHand: List<Card>,
+        val isTransferMode: Boolean
     )
 
     // Action types to send from Client to Host OR Host to Client

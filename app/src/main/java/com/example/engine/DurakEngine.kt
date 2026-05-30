@@ -424,7 +424,8 @@ class DurakEngine {
             gameLogEn = gameLogEn.toList(),
             gameLogRu = gameLogRu.toList(),
             canTake = canTake,
-            canBito = canBito
+            canBito = canBito,
+            isTransferMode = isTransferMode
         )
     }
 

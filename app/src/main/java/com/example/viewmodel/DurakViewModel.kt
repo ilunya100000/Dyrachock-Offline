@@ -19,7 +19,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-enum class AppLanguage { EN, RU, IT }
+enum class AppLanguage { EN, RU, IT, UA }
 
 class DurakViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -216,7 +216,7 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
         "STATUS_TITLE_LABEL" to "Sound Update",
         "CHANGELOG_BTN" to "Changelog",
         "CHANGELOG_TITLE" to "Version Changelog",
-        "CHANGELOG_TEXT" to "Version 0.2-pre3\n\n• Release of \"Transfer Durak\": It is now also available in multiplayer mode.\n• Multiplayer Mode Updates: Playing with more than two players is disabled, Transfer Durak is fully supported, and custom deck configurations can now be used.",
+        "CHANGELOG_TEXT" to "Version 0.2-pre4\n\n• Ukrainian Beta Localization: Added initial support for the Ukrainian language in the main menu, future roadmap, and changelog.\n• Multiplayer Bug Fix: Resolved an issue where the transfer/passing zone menu was not displaying correctly in Transfer mode.",
         "BOT_DECENT_TITLE" to "DECENT AMATEUR BOT",
         "BOT_DECENT_DESC" to "Plays casual valid combinations. Excellent for beginners looking to learn basic durak card sequencing.",
         "BOT_AI_TITLE" to "AI ANALYTICAL BOT",
@@ -265,7 +265,7 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
         "STATUS_TITLE_LABEL" to "Музыкальное обновление",
         "CHANGELOG_BTN" to "Изменения",
         "CHANGELOG_TITLE" to "История изменений",
-        "CHANGELOG_TEXT" to "Версия 0.2-pre3\n\n• Релиз \"Переводного дурака\": Теперь он также доступен в многопользовательском режиме.\n• Изменения в многопользовательском режиме: Теперь нельзя играть больше чем вдвоем, доступен режим \"Переводного дурака\" и новые кастомные варианты колоды.",
+        "CHANGELOG_TEXT" to "Версия 0.2-pre4\n\n• Бета-версия украинской локализации: Добавлена начальная поддержка украинского языка, на данный момент доступная в главном меню, дорожной карте и списке изменений.\n• Исправление бага в мультиплеере: Исправлена ошибка, из-за которой зона/меню перевода карт не отображалась в переводном режиме мультиплеера.",
         "BOT_DECENT_TITLE" to "ЛЮБИТЕЛЬСКИЙ БОТ",
         "BOT_DECENT_DESC" to "Разыгрывает простые допустимые комбинации. Отлично подходит для начинающих, желающих освоить базовый порядок карт в дураке.",
         "BOT_AI_TITLE" to "АНАЛИТИЧЕСКИЙ ИИ-БОТ",
@@ -314,17 +314,28 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
         "STATUS_TITLE_LABEL" to "Aggiornamento audio",
         "CHANGELOG_BTN" to "Registro",
         "CHANGELOG_TITLE" to "Registro Modifiche",
-        "CHANGELOG_TEXT" to "Versione 0.2-pre3\n\n• Rilascio di \"Durak del Trasferimento\": ora disponibile anche in modalità multiplayer.\n• Modifiche alla modalità multiplayer: non è più possibile giocare con più di due giocatori, è disponibile il Durak del Trasferimento e si possono configurare mazzi personalizzati.",
+        "CHANGELOG_TEXT" to "Versione 0.2-pre4\n\n• Localizzazione Ucraina in Beta: Aggiunto il supporto iniziale per la lingua ucraina, attualmente disponibile nel menu principale, nella roadmap e nel registro delle modifiche.\n• Corretto bug nel multiplayer: Risolto un problema per cui la zona/menu di trasferimento carte non veniva visualizzata correttamente nella partita multiplayer.",
         "BOT_DECENT_TITLE" to "BOT AMATORIALE",
         "BOT_DECENT_DESC" to "Gioca combinazioni semplici e valide. Ottimo per i principianti che vogliono imparare la sequenza base delle carte del durak.",
         "BOT_AI_TITLE" to "BOT ANALITICO IA",
         "BOT_AI_DESC" to "Difende con freddo calcolo. Tiene traccia di tutte le carte giocate, conserva i trionfi per le fasi finali e dà priorità a scarti strategici."
     )
 
+    private val uaTranslations = mapOf(
+        "APP_TITLE" to "Дурник Оффлайн",
+        "PLAY_OFFLINE" to "Грати Офлайн",
+        "PLAY_ONLINE" to "Мультиплеєр (Wi-Fi)",
+        "STATUS_TITLE_LABEL" to "Музичне оновлення",
+        "CHANGELOG_BTN" to "Список змін",
+        "CHANGELOG_TITLE" to "Список змін",
+        "CHANGELOG_TEXT" to "Версія 0.2-pre4\n\n• Бета-версія української локалізації: Додано початкову підтримку української мови, наразі доступну в головному меню, дорожній карті та списку змін.\n• Виправлення бага у мультиплеєрі: Виправлено помилку, через яку зона/меню переведення карт не відображалася в переводному режимі мультиплеєра."
+    )
+
     fun getString(key: String): String {
         return when (_appLanguage.value) {
             AppLanguage.RU -> ruTranslations[key] ?: key
             AppLanguage.IT -> itTranslations[key] ?: enTranslations[key] ?: key
+            AppLanguage.UA -> uaTranslations[key] ?: ruTranslations[key] ?: key
             else -> enTranslations[key] ?: key
         }
     }
@@ -339,7 +350,8 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
         val next = when (_appLanguage.value) {
             AppLanguage.EN -> AppLanguage.RU
             AppLanguage.RU -> AppLanguage.IT
-            AppLanguage.IT -> AppLanguage.EN
+            AppLanguage.IT -> AppLanguage.UA
+            AppLanguage.UA -> AppLanguage.EN
         }
         _appLanguage.value = next
         prefs.edit().putString("lang", next.name).apply()
@@ -734,7 +746,8 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
                     gameLogEn = statePayload.gameLogEn,
                     gameLogRu = statePayload.gameLogRu,
                     canTake = !isClientAttacking && statePayload.tablePairs.isNotEmpty() && statePayload.tablePairs.any { it.defenseCard == null },
-                    canBito = isClientAttacking && statePayload.tablePairs.isNotEmpty() && statePayload.tablePairs.all { it.defenseCard != null }
+                    canBito = isClientAttacking && statePayload.tablePairs.isNotEmpty() && statePayload.tablePairs.all { it.defenseCard != null },
+                    isTransferMode = statePayload.isTransferMode
                 )
                 
                 _gameState.value = currentSnapshot

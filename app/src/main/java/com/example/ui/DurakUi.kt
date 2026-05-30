@@ -353,7 +353,7 @@ fun MainMenuScreen(viewModel: DurakViewModel, statsList: List<GameStat>) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "0.2-pre3",
+                    text = "0.2-pre4",
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f)
@@ -393,7 +393,12 @@ fun MainMenuScreen(viewModel: DurakViewModel, statsList: List<GameStat>) {
                         confirmButton = {
                             TextButton(onClick = { showChangelogDialog = false }) {
                                 Text(
-                                    text = if (viewModel.appLanguage.value == AppLanguage.RU) "Закрыть" else "Close",
+                                    text = when (viewModel.appLanguage.value) {
+                                        AppLanguage.RU -> "Закрыть"
+                                        AppLanguage.UA -> "Закрити"
+                                        AppLanguage.IT -> "Chiudi"
+                                        else -> "Close"
+                                    },
                                     fontWeight = FontWeight.Bold
                                 )
                             }
@@ -420,6 +425,7 @@ fun MainMenuScreen(viewModel: DurakViewModel, statsList: List<GameStat>) {
                                 Text(
                                     text = when (appLanguage) {
                                         AppLanguage.RU -> "Дорожная карта"
+                                        AppLanguage.UA -> "Дорожня карта"
                                         AppLanguage.IT -> "Tabella di marcia"
                                         else -> "Future Roadmap"
                                     },
@@ -438,11 +444,13 @@ fun MainMenuScreen(viewModel: DurakViewModel, statsList: List<GameStat>) {
                                     Triple(
                                         when (appLanguage) {
                                             AppLanguage.RU -> "Май (0.1.x)"
+                                            AppLanguage.UA -> "Травень (0.1.x)"
                                             AppLanguage.IT -> "Maggio (0.1.x)"
                                             else -> "May (0.1.x)"
                                         },
                                         when (appLanguage) {
                                             AppLanguage.RU -> "Конструктор колоды и оптимизации интерфейса"
+                                            AppLanguage.UA -> "Конструктор колоди та оптимізації інтерфейсу"
                                             AppLanguage.IT -> "Costruttore di mazzi e ottimizzazione dell'interfaccia"
                                             else -> "Custom deck builder & interface optimizations"
                                         },
@@ -451,11 +459,13 @@ fun MainMenuScreen(viewModel: DurakViewModel, statsList: List<GameStat>) {
                                     Triple(
                                         when (appLanguage) {
                                             AppLanguage.RU -> "0.2 - Музыкальное обновление"
+                                            AppLanguage.UA -> "0.2 - Музичне оновлення"
                                             AppLanguage.IT -> "0.2 - Aggiornamento audio"
                                             else -> "0.2 - Sound Update"
                                         },
                                         when (appLanguage) {
                                             AppLanguage.RU -> "Релиз режима Переводной дурак, Добавление Переводного дурака в Мультиплеер, добавление в игру музыки и звуков, Полноценный выход Итальянского языка, начало Бета тестирования Украинского языка"
+                                            AppLanguage.UA -> "Реліз режиму Перекладний дурак, додавання Перекладного дурака в Мультиплеєр, додавання в гру музики та звуків, Повноцінний вихід Італійської мови, початок Бета тестування Української мови"
                                             AppLanguage.IT -> "Rilascio della modalità Durak del Trasferimento, aggiunta del Durak del Trasferimento al Multiplayer, integrazione di musica ed effetti sonori, rilascio completo della localizzazione italiana e inizio del beta testing ucraino."
                                             else -> "Release of Transfer Durak mode, addition of Transfer Durak to Multiplayer, integration of music and sound effects, full release of the Italian localization, and start of Ukrainian beta testing."
                                         },
@@ -464,11 +474,13 @@ fun MainMenuScreen(viewModel: DurakViewModel, statsList: List<GameStat>) {
                                     Triple(
                                         when (appLanguage) {
                                             AppLanguage.RU -> "Июнь"
+                                            AppLanguage.UA -> "Червень"
                                             AppLanguage.IT -> "Giugno"
                                             else -> "June"
                                         },
                                         when (appLanguage) {
                                             AppLanguage.RU -> "Тестовые версии(0.4.x, 0.5.x)"
+                                            AppLanguage.UA -> "Тестові версії(0.4.x, 0.5.x)"
                                             AppLanguage.IT -> "Versioni di test(0.4.x, 0.5.x)"
                                             else -> "Testing versions(0.4.x, 0.5.x)"
                                         },
@@ -477,11 +489,13 @@ fun MainMenuScreen(viewModel: DurakViewModel, statsList: List<GameStat>) {
                                     Triple(
                                         when (appLanguage) {
                                             AppLanguage.RU -> "Июль"
+                                            AppLanguage.UA -> "Липень"
                                             AppLanguage.IT -> "Luglio"
                                             else -> "July"
                                         },
                                         when (appLanguage) {
                                             AppLanguage.RU -> "Обновление интерфейса(0.6, 0.7)"
+                                            AppLanguage.UA -> "Оновлення інтерфейсу(0.6, 0.7)"
                                             AppLanguage.IT -> "Aggiornamento dell'interfaccia(0.6, 0.7)"
                                             else -> "Interface design overhaul(0.6, 0.7)"
                                         },
@@ -490,11 +504,13 @@ fun MainMenuScreen(viewModel: DurakViewModel, statsList: List<GameStat>) {
                                     Triple(
                                         when (appLanguage) {
                                             AppLanguage.RU -> "Август"
+                                            AppLanguage.UA -> "Серпень"
                                             AppLanguage.IT -> "Agosto"
                                             else -> "August"
                                         },
                                         when (appLanguage) {
                                             AppLanguage.RU -> "Подготовка к релизу(0.8, 0.9.x)"
+                                            AppLanguage.UA -> "Підготовка до релізу(0.8, 0.9.x)"
                                             AppLanguage.IT -> "Preparazione al rilascio(0.8, 0.9.x)"
                                             else -> "Preparing for release(0.8, 0.9.x)"
                                         },
@@ -503,11 +519,13 @@ fun MainMenuScreen(viewModel: DurakViewModel, statsList: List<GameStat>) {
                                     Triple(
                                         when (appLanguage) {
                                             AppLanguage.RU -> "Сентябрь"
+                                            AppLanguage.UA -> "Вересень"
                                             AppLanguage.IT -> "Settembre"
                                             else -> "September"
                                         },
                                         when (appLanguage) {
                                             AppLanguage.RU -> "Релиз(1.0) 🎉"
+                                            AppLanguage.UA -> "Реліз(1.0) 🎉"
                                             AppLanguage.IT -> "Rilascio ufficiale(1.0) 🎉"
                                             else -> "Official Release(1.0) 🎉"
                                         },
@@ -570,7 +588,12 @@ fun MainMenuScreen(viewModel: DurakViewModel, statsList: List<GameStat>) {
                         confirmButton = {
                             TextButton(onClick = { showRoadmapDialog = false }) {
                                 Text(
-                                    text = if (viewModel.appLanguage.value == AppLanguage.RU) "Закрыть" else "Close",
+                                    text = when (viewModel.appLanguage.value) {
+                                        AppLanguage.RU -> "Закрыть"
+                                        AppLanguage.UA -> "Закрити"
+                                        AppLanguage.IT -> "Chiudi"
+                                        else -> "Close"
+                                    },
                                     fontWeight = FontWeight.Bold
                                 )
                             }
@@ -590,6 +613,7 @@ fun MainMenuScreen(viewModel: DurakViewModel, statsList: List<GameStat>) {
                 Text(
                     text = when (appLanguage) {
                         AppLanguage.RU -> "Выберите язык"
+                        AppLanguage.UA -> "Оберіть мову"
                         AppLanguage.IT -> "Seleziona lingua"
                         else -> "Select Language"
                     },
@@ -601,7 +625,8 @@ fun MainMenuScreen(viewModel: DurakViewModel, statsList: List<GameStat>) {
                     val languages = listOf(
                         AppLanguage.EN to "English",
                         AppLanguage.RU to "Русский",
-                        AppLanguage.IT to "Italiano"
+                        AppLanguage.IT to "Italiano",
+                        AppLanguage.UA to "Українська (Beta)"
                     )
                     languages.forEach { (lang, label) ->
                         Row(
@@ -636,6 +661,7 @@ fun MainMenuScreen(viewModel: DurakViewModel, statsList: List<GameStat>) {
                     Text(
                         text = when (appLanguage) {
                             AppLanguage.RU -> "Подтвердить"
+                            AppLanguage.UA -> "Підтвердити"
                             AppLanguage.IT -> "Conferma"
                             else -> "Confirm"
                         }
@@ -649,6 +675,7 @@ fun MainMenuScreen(viewModel: DurakViewModel, statsList: List<GameStat>) {
                     Text(
                         text = when (appLanguage) {
                             AppLanguage.RU -> "Отмена"
+                            AppLanguage.UA -> "Скасувати"
                             AppLanguage.IT -> "Annulla"
                             else -> "Cancel"
                         }
@@ -1435,12 +1462,12 @@ fun GameTableScreen(viewModel: DurakViewModel) {
     val isThinking by viewModel.botThinking.collectAsStateWithLifecycle()
     val appLanguage by viewModel.appLanguage.collectAsStateWithLifecycle()
     val offlineSubMode by viewModel.offlineSubMode.collectAsStateWithLifecycle()
-    val isTransferEnabled = (viewModel.activeMode.collectAsStateWithLifecycle().value == GameMode.OFFLINE) && 
-                            (offlineSubMode == DurakViewModel.OfflineSubMode.TRANSFER)
+    val activeMode by viewModel.activeMode.collectAsStateWithLifecycle()
+    val isTransferEnabled = snapshot.isTransferMode
     val canPlayerTransferNow = isTransferEnabled && 
             snapshot.tablePairs.isNotEmpty() && 
             snapshot.tablePairs.all { it.defenseCard == null } &&
-            snapshot.attackerPlayerId == "opponent"
+            (if (activeMode == GameMode.ONLINE_CLIENT) snapshot.attackerPlayerId == "player" else snapshot.attackerPlayerId == "opponent")
 
     var showLogs by remember { mutableStateOf(false) }
 

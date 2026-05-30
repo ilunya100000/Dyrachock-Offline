@@ -81,8 +81,16 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
     private val _currentScreen = MutableStateFlow(Screen.MAIN_MENU)
     val currentScreen = _currentScreen.asStateFlow()
 
+    private val prefs = application.getSharedPreferences("durak_prefs", android.content.Context.MODE_PRIVATE)
+
     // Preferences & Settings
-    private val _appLanguage = MutableStateFlow(AppLanguage.EN)
+    private val _appLanguage = MutableStateFlow(
+        try {
+            AppLanguage.valueOf(prefs.getString("lang", AppLanguage.RU.name) ?: AppLanguage.RU.name)
+        } catch (e: Exception) {
+            AppLanguage.RU
+        }
+    )
     val appLanguage = _appLanguage.asStateFlow()
 
     private val _isBotHard = MutableStateFlow(false)
@@ -201,7 +209,7 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
         "STATUS_TITLE_LABEL" to "Sound Update",
         "CHANGELOG_BTN" to "Changelog",
         "CHANGELOG_TITLE" to "Version Changelog",
-        "CHANGELOG_TEXT" to "Version 0.2-pre1\n\n• Localized Bot Descriptions: Detailed AI difficulty insight in English, Russian, and Italian.\n• Screen Orientation Lock: The game is now locked to Portrait mode for consistent touch and drag mechanics.\n• Improved Transfer Rules: Trump cards are fully transferable in Transfer Durak mode.\n• Multiplayer Hotfix: Resolved critical synchronization issues between host and guest players.",
+        "CHANGELOG_TEXT" to "Version 0.2-pre2\n\n• Italian Leaves Beta: Full localization is now officially released.\n• Russian by Default: Switched the default application language.\n• Custom Deck Builder Fixed: Cards can now be freely scrolled and managed.",
         "BOT_DECENT_TITLE" to "DECENT AMATEUR BOT",
         "BOT_DECENT_DESC" to "Plays casual valid combinations. Excellent for beginners looking to learn basic durak card sequencing.",
         "BOT_AI_TITLE" to "AI ANALYTICAL BOT",
@@ -250,7 +258,7 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
         "STATUS_TITLE_LABEL" to "Музыкальное обновление",
         "CHANGELOG_BTN" to "Изменения",
         "CHANGELOG_TITLE" to "История изменений",
-        "CHANGELOG_TEXT" to "Версия 0.2-pre1\n\n• Локализация Описаний Ботов: Подробная информация об ИИ-сложности на русском, английском и итальянском языках.\n• Блокировка ориентации экрана: Приложение теперь строго зафиксировано в портретном режиме.\n• Перевод козырей: Козырные карты теперь можно переводить в режиме Переводного Дурака.\n• Исправление мультиплеера: Устранена критическая ошибка десинхронизации карт и ходов между хостом и клиентом.",
+        "CHANGELOG_TEXT" to "Версия 0.2-pre2\n\n• Выход итальянского языка из беты: Локализация полностью готова.\n• Русский по умолчанию: Изменен дефолтный язык приложения.\n• Исправлен баг в конструкторе колоды: Карты теперь можно свободно пролистывать и перемещать.",
         "BOT_DECENT_TITLE" to "ЛЮБИТЕЛЬСКИЙ БОТ",
         "BOT_DECENT_DESC" to "Разыгрывает простые допустимые комбинации. Отлично подходит для начинающих, желающих освоить базовый порядок карт в дураке.",
         "BOT_AI_TITLE" to "АНАЛИТИЧЕСКИЙ ИИ-БОТ",
@@ -258,10 +266,48 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
     )
 
     private val itTranslations = mapOf(
+        "APP_TITLE" to "Durak Offline",
+        "PLAY_OFFLINE" to "Gioca Offline",
+        "PLAY_ONLINE" to "Multiplayer Locale",
+        "BOT_SETUP_TITLE" to "Partita Offline",
+        "DIFFICULTY" to "Difficoltà Bot",
+        "EASY" to "Facile (Casuale)",
+        "HARD" to "Difficile (Analitico)",
+        "START_GAME" to "Inizia Gioco",
+        "P2P_TITLE" to "Online Locale",
+        "NSD_STATUS" to "Rilevamento Wi-Fi Hub",
+        "HOST_LOBBY" to "Crea una Stanza",
+        "MY_IP" to "Tuo IP Host:",
+        "DISCOVERY_ACTIVE" to "Ricerca host locali in corso...",
+        "TAP_TO_CONNECT" to "Tocca per connetterti",
+        "MANUAL_CONNECT" to "Connessione IP Diretta",
+        "ENTER_HOST_IP" to "Inserisci l'indirizzo IP dell'host",
+        "CONNECT_BTN" to "Connetti",
+        "WAITING_LOBBY" to "Stanza aperta. In attesa del giocatore...",
+        "DISCONNECTED" to "Disconnesso",
+        "CONNECTING" to "Connessione in corso...",
+        "BACK" to "Indietro",
+        "TAKE" to "Prendi Tutto",
+        "BITO" to "Bito / Passa",
+        "RESTART" to "Gioca Ancora",
+        "MENU" to "Menu Principale",
+        "DECK" to "Mazzo",
+        "TRUMP" to "Trionfo",
+        "STATS_TITLE" to "Archivi Partite",
+        "CLEAR_STATS" to "Cancella Archivi",
+        "EMPTY_STATS" to "Nessuna cronologia registrata.",
+        "GAME_LOGS" to "Registro di Battaglia",
+        "TURN_PLAYER" to "Tuo Turno",
+        "TURN_BOT" to "Il Bot sta pensando...",
+        "TURN_OPPONENT" to "Turno dell'Avversario",
+        "WIN_TITLE" to "VITTORIA!",
+        "LOST_TITLE" to "SCONFITTA! SEI IL DURAK!",
+        "DRAW_TITLE" to "PAREGGIO!",
+        "DISC_TITLE" to "Avversario disconnesso!",
         "STATUS_TITLE_LABEL" to "Aggiornamento audio",
         "CHANGELOG_BTN" to "Registro",
-        "CHANGELOG_TITLE" to "Registro Modifiche (Beta)",
-        "CHANGELOG_TEXT" to "Versione 0.2-pre1\n\n• Descrizioni dei bot localizzate: Dettagli sull'intelligenza artificiale in inglese, russo e italiano.\n• Blocco dell'orientamento: Il gioco è ora bloccato in modalità verticale per garantire controlli fluidi.\n• Regole di trasferimento migliorate: I trionfi (carte d'atout) sono ora completamente trasferibili.\n• Risoluzione multiplayer: Corretto il bug critico di sincronizzazione delle carte per host e ospiti.",
+        "CHANGELOG_TITLE" to "Registro Modifiche",
+        "CHANGELOG_TEXT" to "Versione 0.2-pre2\n\n• Italiano fuori dalla Beta: La localizzazione completa è ora ufficiale.\n• Russo come impostazione predefinita: Sostituita la lingua di default.\n• Costruttore di mazzo corretto: Le carte ora possono essere scorse e gestite liberamente.",
         "BOT_DECENT_TITLE" to "BOT AMATORIALE",
         "BOT_DECENT_DESC" to "Gioca combinazioni semplici e valide. Ottimo per i principianti che vogliono imparare la sequenza base delle carte del durak.",
         "BOT_AI_TITLE" to "BOT ANALITICO IA",
@@ -279,14 +325,17 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
     // Settings actions
     fun setLanguage(lang: AppLanguage) {
         _appLanguage.value = lang
+        prefs.edit().putString("lang", lang.name).apply()
     }
 
     fun toggleLanguage() {
-        _appLanguage.value = when (_appLanguage.value) {
+        val next = when (_appLanguage.value) {
             AppLanguage.EN -> AppLanguage.RU
             AppLanguage.RU -> AppLanguage.IT
             AppLanguage.IT -> AppLanguage.EN
         }
+        _appLanguage.value = next
+        prefs.edit().putString("lang", next.name).apply()
     }
 
     fun setDifficulty(hard: Boolean) {

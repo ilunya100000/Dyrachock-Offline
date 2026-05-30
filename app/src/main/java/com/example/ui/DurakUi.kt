@@ -11,6 +11,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.IntOffset
 import kotlin.math.roundToInt
@@ -243,7 +244,7 @@ fun MainMenuScreen(viewModel: DurakViewModel, statsList: List<GameStat>) {
                             color = MaterialTheme.colorScheme.primary
                         )
                         Text(
-                            text = if (appLanguage == AppLanguage.RU) "Матчей" else "Games",
+                            text = if (appLanguage == AppLanguage.RU) "Матчей" else if (appLanguage == AppLanguage.IT) "Partite" else "Games",
                             fontSize = 11.sp,
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                         )
@@ -257,7 +258,7 @@ fun MainMenuScreen(viewModel: DurakViewModel, statsList: List<GameStat>) {
                             color = MaterialTheme.colorScheme.tertiary
                         )
                         Text(
-                            text = if (appLanguage == AppLanguage.RU) "Побед" else "Winrate",
+                            text = if (appLanguage == AppLanguage.RU) "Побед" else if (appLanguage == AppLanguage.IT) "Vittorie" else "Winrate",
                             fontSize = 11.sp,
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                         )
@@ -352,7 +353,7 @@ fun MainMenuScreen(viewModel: DurakViewModel, statsList: List<GameStat>) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "0.2-pre1",
+                    text = "0.2-pre2",
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f)
@@ -600,7 +601,7 @@ fun MainMenuScreen(viewModel: DurakViewModel, statsList: List<GameStat>) {
                     val languages = listOf(
                         AppLanguage.EN to "English",
                         AppLanguage.RU to "Русский",
-                        AppLanguage.IT to "Italiano (Beta)"
+                        AppLanguage.IT to "Italiano"
                     )
                     languages.forEach { (lang, label) ->
                         Row(
@@ -752,7 +753,7 @@ fun OfflineSetupScreen(viewModel: DurakViewModel) {
             }
 
             Text(
-                text = if (appLanguage == AppLanguage.RU) "Режим Игры" else "Game Variant",
+                text = if (appLanguage == AppLanguage.RU) "Режим Игры" else if (appLanguage == AppLanguage.IT) "Modalità" else "Game Variant",
                 fontSize = 15.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
@@ -777,7 +778,7 @@ fun OfflineSetupScreen(viewModel: DurakViewModel) {
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = if (appLanguage == AppLanguage.RU) "Классический" else "Classic",
+                        text = if (appLanguage == AppLanguage.RU) "Классический" else if (appLanguage == AppLanguage.IT) "Classico" else "Classic",
                         color = if (subMode == com.example.viewmodel.DurakViewModel.OfflineSubMode.CLASSIC) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
                         fontWeight = FontWeight.Bold,
                         fontSize = 14.sp
@@ -794,7 +795,7 @@ fun OfflineSetupScreen(viewModel: DurakViewModel) {
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = if (appLanguage == AppLanguage.RU) "Переводной (Beta)" else "Passing (Beta)",
+                        text = if (appLanguage == AppLanguage.RU) "Переводной (Beta)" else if (appLanguage == AppLanguage.IT) "Trasferimento" else "Passing (Beta)",
                         color = if (subMode == com.example.viewmodel.DurakViewModel.OfflineSubMode.TRANSFER) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
                         fontWeight = FontWeight.Bold,
                         fontSize = 14.sp
@@ -1004,7 +1005,7 @@ fun MultiplayerHubScreen(viewModel: DurakViewModel) {
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = if (appLanguage == AppLanguage.RU) "Раздать лобби" else "Host Match",
+                        text = if (appLanguage == AppLanguage.RU) "Раздать лобби" else if (appLanguage == AppLanguage.IT) "Crea Stanza" else "Host Match",
                         color = MaterialTheme.colorScheme.onSurface,
                         fontWeight = FontWeight.Bold,
                         fontSize = 13.sp
@@ -1021,7 +1022,7 @@ fun MultiplayerHubScreen(viewModel: DurakViewModel) {
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = if (appLanguage == AppLanguage.RU) "Войти в лобби" else "Search/Join",
+                        text = if (appLanguage == AppLanguage.RU) "Войти в лобби" else if (appLanguage == AppLanguage.IT) "Cerca / Entra" else "Search/Join",
                         color = MaterialTheme.colorScheme.onSurface,
                         fontWeight = FontWeight.Bold,
                         fontSize = 13.sp
@@ -1072,7 +1073,7 @@ fun MultiplayerHubScreen(viewModel: DurakViewModel) {
                         val selectedPlayersCount by viewModel.mpLobbyPlayersCount.collectAsStateWithLifecycle()
 
                         Text(
-                            text = if (appLanguage == AppLanguage.RU) "Размер колоды" else "Deck Size",
+                            text = if (appLanguage == AppLanguage.RU) "Размер колоды" else if (appLanguage == AppLanguage.IT) "Dimensione mazzo" else "Deck Size",
                             fontSize = 13.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
@@ -1127,7 +1128,7 @@ fun MultiplayerHubScreen(viewModel: DurakViewModel) {
                         Spacer(modifier = Modifier.height(16.dp))
 
                         Text(
-                            text = if (appLanguage == AppLanguage.RU) "Количество игроков" else "Max Players",
+                            text = if (appLanguage == AppLanguage.RU) "Количество игроков" else if (appLanguage == AppLanguage.IT) "Max Giocatori" else "Max Players",
                             fontSize = 13.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
@@ -1790,7 +1791,7 @@ fun GameTableScreen(viewModel: DurakViewModel) {
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 13.sp
                             )
-                            val trumpLabel = if (appLanguage == AppLanguage.RU) snapshot.trumpSuit.ruLabel else snapshot.trumpSuit.enLabel
+                            val trumpLabel = if (appLanguage == AppLanguage.RU) snapshot.trumpSuit.ruLabel else if (appLanguage == AppLanguage.IT) snapshot.trumpSuit.itLabel else snapshot.trumpSuit.enLabel
                             Text(
                                 text = "${viewModel.getString("TRUMP")}: ${snapshot.trumpSuit.symbol} ($trumpLabel)",
                                 color = if (snapshot.trumpSuit.colorRed) Color(0xFFFF5252) else Color.White.copy(alpha = 0.7f),
@@ -1867,9 +1868,9 @@ fun GameTableScreen(viewModel: DurakViewModel) {
                 // Turn Status Text inside Footer
                 Text(
                     text = if (snapshot.isLocalTurn) {
-                        if (appLanguage == AppLanguage.RU) "ВАШ ХОД" else "YOUR TURN"
+                        if (appLanguage == AppLanguage.RU) "ВАШ ХОД" else if (appLanguage == AppLanguage.IT) "TUO TURNO" else "YOUR TURN"
                     } else {
-                        if (appLanguage == AppLanguage.RU) "ХОД БОТА" else "BOT'S TURN"
+                        if (appLanguage == AppLanguage.RU) "ХОД БОТА" else if (appLanguage == AppLanguage.IT) "TURNO DEL BOT" else "BOT'S TURN"
                     },
                     color = if (snapshot.isLocalTurn) Color(0xFFD1E4FF) else Color(0xFF909094),
                     fontSize = 12.sp,
@@ -2475,8 +2476,8 @@ fun StatsBoardScreen(viewModel: DurakViewModel, statsList: List<GameStat>) {
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Column {
-                                    val oppPrefix = if (appLanguage == AppLanguage.RU) "Оппонент" else "Opponent"
-                                    val modePrefix = if (appLanguage == AppLanguage.RU) "Режим" else "Mode"
+                                    val oppPrefix = if (appLanguage == AppLanguage.RU) "Оппонент" else if (appLanguage == AppLanguage.IT) "Avversario" else "Opponent"
+                                    val modePrefix = if (appLanguage == AppLanguage.RU) "Режим" else if (appLanguage == AppLanguage.IT) "Modalità" else "Mode"
                                     Text(
                                         text = "$oppPrefix: ${stat.opponentName}",
                                         fontWeight = FontWeight.Bold,
@@ -2497,9 +2498,9 @@ fun StatsBoardScreen(viewModel: DurakViewModel, statsList: List<GameStat>) {
 
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     val labelRes = when (stat.result) {
-                                        "WON" -> if (appLanguage == AppLanguage.RU) "ПОБЕДА" else "WON"
-                                        "LOST" -> if (appLanguage == AppLanguage.RU) "ПОРАЖЕНИЕ" else "LOST"
-                                        else -> if (appLanguage == AppLanguage.RU) "НИЧЬЯ" else "DRAW"
+                                        "WON" -> if (appLanguage == AppLanguage.RU) "ПОБЕДА" else if (appLanguage == AppLanguage.IT) "VITTORIA" else "WON"
+                                        "LOST" -> if (appLanguage == AppLanguage.RU) "ПОРАЖЕНИЕ" else if (appLanguage == AppLanguage.IT) "SCONFITTA" else "LOST"
+                                        else -> if (appLanguage == AppLanguage.RU) "НИЧЬЯ" else if (appLanguage == AppLanguage.IT) "PAREGGIO" else "DRAW"
                                     }
                                     Text(
                                         text = labelRes,
@@ -2533,7 +2534,7 @@ fun StatsBoardScreen(viewModel: DurakViewModel, statsList: List<GameStat>) {
                                         .padding(12.dp)
                                 ) {
                                     Text(
-                                        text = if (appLanguage == AppLanguage.RU) "Ход игры:" else "Battle History:",
+                                        text = if (appLanguage == AppLanguage.RU) "Ход игры:" else if (appLanguage == AppLanguage.IT) "Cronologia Battaglia:" else "Battle History:",
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 12.sp,
                                         color = MaterialTheme.colorScheme.secondary,
@@ -2541,7 +2542,7 @@ fun StatsBoardScreen(viewModel: DurakViewModel, statsList: List<GameStat>) {
                                     )
                                     if (logLines.isEmpty()) {
                                         Text(
-                                            text = if (appLanguage == AppLanguage.RU) "Логи отсутствуют для этого матча" else "No logs captured for this game",
+                                            text = if (appLanguage == AppLanguage.RU) "Логи отсутствуют для этого матча" else if (appLanguage == AppLanguage.IT) "Nessun registro per questa partita" else "No logs captured for this game",
                                             fontSize = 11.sp,
                                             fontStyle = FontStyle.Italic,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
@@ -2735,16 +2736,14 @@ fun CustomDeckSelectionScreen(viewModel: DurakViewModel) {
                                     shape = RoundedCornerShape(16.dp)
                                 )
                                 .pointerInput(card.id) {
-                                    detectDragGestures(
+                                    detectVerticalDragGestures(
                                         onDragStart = {
                                             isDraggingCard = true
                                             cardDragOffsetY = 0f
                                         },
-                                        onDrag = { change, dragAmount ->
-                                            if (kotlin.math.abs(dragAmount.y) > kotlin.math.abs(dragAmount.x) || cardDragOffsetY != 0f) {
-                                                change.consume()
-                                                cardDragOffsetY += dragAmount.y
-                                            }
+                                        onVerticalDrag = { change, dragAmount ->
+                                            change.consume()
+                                            cardDragOffsetY += dragAmount
                                         },
                                         onDragEnd = {
                                             isDraggingCard = false

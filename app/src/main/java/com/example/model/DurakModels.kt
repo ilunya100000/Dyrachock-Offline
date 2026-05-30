@@ -1,10 +1,10 @@
 package com.example.model
 
-enum class Suit(val symbol: String, val colorRed: Boolean, val ruLabel: String, val enLabel: String) {
-    SPADES("♠", false, "Пики", "Spades"),
-    CLUBS("♣", false, "Трефы", "Clubs"),
-    HEARTS("♥", true, "Черви", "Hearts"),
-    DIAMONDS("♦", true, "Бубны", "Diamonds")
+enum class Suit(val symbol: String, val colorRed: Boolean, val ruLabel: String, val enLabel: String, val itLabel: String) {
+    SPADES("♠", false, "Пики", "Spades", "Picche"),
+    CLUBS("♣", false, "Трефы", "Clubs", "Fiori"),
+    HEARTS("♥", true, "Черви", "Hearts", "Cuori"),
+    DIAMONDS("♦", true, "Бубны", "Diamonds", "Quadri")
 }
 
 enum class Rank(val value: Int, val symbol: String) {

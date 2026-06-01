@@ -99,7 +99,10 @@ fun DurakApp(viewModel: DurakViewModel) {
 @Composable
 fun MainMenuScreen(viewModel: DurakViewModel, statsList: List<GameStat>) {
     val appLanguage by viewModel.appLanguage.collectAsStateWithLifecycle()
-    var showLanguageDialog by remember { mutableStateOf(false) }
+    val musicVol by viewModel.musicVolume.collectAsStateWithLifecycle()
+    val sfxVol by viewModel.sfxVolume.collectAsStateWithLifecycle()
+    var showSettingsDialog by remember { mutableStateOf(false) }
+    var settingsTab by remember { mutableStateOf(0) } // 0 = Sound, 1 = Language
     var showRoadmapDialog by remember { mutableStateOf(false) }
     var selectedLangTemp by remember { mutableStateOf(appLanguage) }
 
@@ -139,15 +142,15 @@ fun MainMenuScreen(viewModel: DurakViewModel, statsList: List<GameStat>) {
             IconButton(
                 onClick = {
                     selectedLangTemp = appLanguage
-                    showLanguageDialog = true
+                    showSettingsDialog = true
                 },
                 modifier = Modifier
                     .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
-                    .testTag("lang_toggle")
+                    .testTag("settings_button")
             ) {
                 Icon(
-                    imageVector = Icons.Default.Language,
-                    contentDescription = "Change Language",
+                    imageVector = Icons.Default.Settings,
+                    contentDescription = viewModel.getString("SETTINGS"),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
@@ -353,7 +356,7 @@ fun MainMenuScreen(viewModel: DurakViewModel, statsList: List<GameStat>) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "0.2-pre5",
+                    text = "0.2",
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f)
@@ -606,47 +609,166 @@ fun MainMenuScreen(viewModel: DurakViewModel, statsList: List<GameStat>) {
         }
     }
 
-    if (showLanguageDialog) {
+    if (showSettingsDialog) {
         AlertDialog(
-            onDismissRequest = { showLanguageDialog = false },
+            onDismissRequest = { showSettingsDialog = false },
             title = {
                 Text(
-                    text = when (appLanguage) {
-                        AppLanguage.RU -> "Выберите язык"
-                        AppLanguage.UA -> "Оберіть мову"
-                        AppLanguage.IT -> "Seleziona lingua"
-                        else -> "Select Language"
-                    },
-                    fontWeight = FontWeight.Bold
+                    text = viewModel.getString("SETTINGS"),
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 20.sp
                 )
             },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    val languages = listOf(
-                        AppLanguage.EN to "English",
-                        AppLanguage.RU to "Русский",
-                        AppLanguage.IT to "Italiano",
-                        AppLanguage.UA to "Українська (Beta)"
-                    )
-                    languages.forEach { (lang, label) ->
-                        Row(
+                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    // Custom navigation tabs
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        // Tab 0: Sound
+                        Box(
                             modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { selectedLangTemp = lang }
-                                .padding(vertical = 8.dp, horizontal = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                                .weight(1f)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(if (settingsTab == 0) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant)
+                                .clickable { settingsTab = 0 }
+                                .padding(vertical = 10.dp),
+                            contentAlignment = Alignment.Center
                         ) {
-                            RadioButton(
-                                selected = (selectedLangTemp == lang),
-                                onClick = { selectedLangTemp = lang }
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Icon(
+                                    imageVector = Icons.Default.VolumeUp,
+                                    contentDescription = null,
+                                    tint = if (settingsTab == 0) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Text(
+                                    text = viewModel.getString("SOUND_TAB"),
+                                    color = if (settingsTab == 0) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 14.sp
+                                )
+                            }
+                        }
+                        // Tab 1: Language
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(if (settingsTab == 1) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant)
+                                .clickable { settingsTab = 1 }
+                                .padding(vertical = 10.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Icon(
+                                    imageVector = Icons.Default.Language,
+                                    contentDescription = null,
+                                    tint = if (settingsTab == 1) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Text(
+                                    text = viewModel.getString("LANG_TAB"),
+                                    color = if (settingsTab == 1) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 14.sp
+                                )
+                            }
+                        }
+                    }
+
+                    // Content based on tab
+                    if (settingsTab == 0) {
+                        // Sound volume controls
+                        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                            // Music Volume
+                            Column {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = viewModel.getString("MUSIC_VOL"),
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        text = "${(musicVol * 100).toInt()}%",
+                                        fontSize = 13.sp,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                                Slider(
+                                    value = musicVol,
+                                    onValueChange = { viewModel.setMusicVolume(it) },
+                                    valueRange = 0f..1f,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            }
+
+                            // SFX Volume
+                            Column {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = viewModel.getString("SFX_VOL"),
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        text = "${(sfxVol * 100).toInt()}%",
+                                        fontSize = 13.sp,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                                Slider(
+                                    value = sfxVol,
+                                    onValueChange = { viewModel.setSfxVolume(it) },
+                                    valueRange = 0f..1f,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            }
+                        }
+                    } else {
+                        // Language Picker
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            val languages = listOf(
+                                AppLanguage.EN to "English",
+                                AppLanguage.RU to "Русский",
+                                AppLanguage.IT to "Italiano",
+                                AppLanguage.UA to "Українська (Beta)"
                             )
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Text(
-                                text = label,
-                                fontSize = 16.sp,
-                                fontWeight = if (selectedLangTemp == lang) FontWeight.Bold else FontWeight.Normal,
-                                color = if (selectedLangTemp == lang) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
-                            )
+                            languages.forEach { (lang, label) ->
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .clickable { selectedLangTemp = lang }
+                                        .padding(vertical = 8.dp, horizontal = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    RadioButton(
+                                        selected = (selectedLangTemp == lang),
+                                        onClick = { selectedLangTemp = lang }
+                                    )
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Text(
+                                        text = label,
+                                        fontSize = 16.sp,
+                                        fontWeight = if (selectedLangTemp == lang) FontWeight.Bold else FontWeight.Normal,
+                                        color = if (selectedLangTemp == lang) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -654,8 +776,10 @@ fun MainMenuScreen(viewModel: DurakViewModel, statsList: List<GameStat>) {
             confirmButton = {
                 Button(
                     onClick = {
-                        viewModel.setLanguage(selectedLangTemp)
-                        showLanguageDialog = false
+                        if (settingsTab == 1) {
+                            viewModel.setLanguage(selectedLangTemp)
+                        }
+                        showSettingsDialog = false
                     }
                 ) {
                     Text(
@@ -670,7 +794,7 @@ fun MainMenuScreen(viewModel: DurakViewModel, statsList: List<GameStat>) {
             },
             dismissButton = {
                 TextButton(
-                    onClick = { showLanguageDialog = false }
+                    onClick = { showSettingsDialog = false }
                 ) {
                     Text(
                         text = when (appLanguage) {

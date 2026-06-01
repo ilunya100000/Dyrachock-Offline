@@ -108,11 +108,28 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
     private val _opponentNickname = MutableStateFlow("Opponent")
     val opponentNickname = _opponentNickname.asStateFlow()
 
+    private val _musicVolume = MutableStateFlow(prefs.getFloat("music_volume", 0.5f))
+    val musicVolume = _musicVolume.asStateFlow()
+
+    private val _sfxVolume = MutableStateFlow(prefs.getFloat("sfx_volume", 0.5f))
+    val sfxVolume = _sfxVolume.asStateFlow()
+
+    fun setMusicVolume(value: Float) {
+        _musicVolume.value = value
+        com.example.audio.DurakAudioManager.musicVolume = value
+        prefs.edit().putFloat("music_volume", value).apply()
+    }
+
+    fun setSfxVolume(value: Float) {
+        _sfxVolume.value = value
+        com.example.audio.DurakAudioManager.sfxVolume = value
+        prefs.edit().putFloat("sfx_volume", value).apply()
+    }
+
     fun setPlayerNickname(name: String) {
-        val trimmed = name.trim().take(15)
-        val finalName = if (trimmed.isEmpty()) "Player" else trimmed
-        _playerNickname.value = finalName
-        prefs.edit().putString("nickname", finalName).apply()
+        val trimmed = name.take(15)
+        _playerNickname.value = trimmed
+        prefs.edit().putString("nickname", trimmed).apply()
     }
 
     // Multiplayer properties
@@ -163,6 +180,26 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     init {
+        // Initialize AudioManager with application context and volumes
+        com.example.audio.DurakAudioManager.initialize(application)
+        com.example.audio.DurakAudioManager.musicVolume = _musicVolume.value
+        com.example.audio.DurakAudioManager.sfxVolume = _sfxVolume.value
+
+        // Setup background music dynamic track state engine observer
+        viewModelScope.launch {
+            kotlinx.coroutines.flow.combine(_currentScreen, _gameState) { screen, state ->
+                Pair(screen, state)
+            }.collect { (screen, state) ->
+                if (screen == Screen.GAME_TABLE && state.matchStatus == MatchStatus.PLAYING && state.deckSize == 0) {
+                    com.example.audio.DurakAudioManager.startMusic(6)
+                } else if (screen == Screen.MAIN_MENU || screen == Screen.OFFLINE_SETUP || screen == Screen.MULTIPLAYER_HUB || screen == Screen.STATS_BOARD || screen == Screen.GAME_TABLE) {
+                    com.example.audio.DurakAudioManager.startMusic(5)
+                } else {
+                    com.example.audio.DurakAudioManager.stopMusic()
+                }
+            }
+        }
+
         // Monitor socket incoming network actions
         viewModelScope.launch {
             multiplayerManager.incomingMessages.collect { rawMsg ->
@@ -229,11 +266,16 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
         "STATUS_TITLE_LABEL" to "Sound Update",
         "CHANGELOG_BTN" to "Changelog",
         "CHANGELOG_TITLE" to "Version Changelog",
-        "CHANGELOG_TEXT" to "Version 0.2-pre5\n\n• Nickname Identity: Added full support for custom usernames in multiplayer. Customize your nickname and see your opponent's name dynamically displayed on-screen and stored in historical battle stats.\n• Defending Precision Fix: Resolved a major combat limitation! Players can now precisely choose which tabletop card to defeat by dragging cards and dropping them directly onto specific target piles in all game modes.\n• Combat Desynchronization Fix: Fixed a telemetry anomaly in local network matches where match results (victory/defeat) of one player were incorrectly recorded for both peers. Results are now correctly and distinctly calculated for every individual.",
+        "CHANGELOG_TEXT" to "Version 0.2 (Sounds & Music Update)\n\n• Audio Integration: Added background musical scores and real-time sound effects for dealing, playing, defending, and transferring cards.\n• Multiplayer Evolution: Dynamic multiplayer is fully operational in Classic/Transfer modes with custom nicknames and peer capacity limit.\n• New Languages: Official Italian localization release and Ukrainian Beta testing support.\n• Passing/Transfer mode: Complete launch in offline and online modes, with polished rules.\n• Crucial Bug Fixes: Fixed broken multiplayer connectivity, screen landscape locking issues, username synchronization failures, and the 'Player' input field edit lock.",
         "BOT_DECENT_TITLE" to "DECENT AMATEUR BOT",
         "BOT_DECENT_DESC" to "Plays casual valid combinations. Excellent for beginners looking to learn basic durak card sequencing.",
         "BOT_AI_TITLE" to "AI ANALYTICAL BOT",
-        "BOT_AI_DESC" to "Defends with cold calculation. Tracks all played cards, saves trumps for endgame clutches, and prioritizes strategic discard sequences."
+        "BOT_AI_DESC" to "Defends with cold calculation. Tracks all played cards, saves trumps for endgame clutches, and prioritizes strategic discard sequences.",
+        "SETTINGS" to "Settings",
+        "SOUND_TAB" to "Sound",
+        "LANG_TAB" to "Language",
+        "MUSIC_VOL" to "Music",
+        "SFX_VOL" to "Effects"
     )
 
     private val ruTranslations = mapOf(
@@ -278,11 +320,16 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
         "STATUS_TITLE_LABEL" to "Музыкальное обновление",
         "CHANGELOG_BTN" to "Изменения",
         "CHANGELOG_TITLE" to "История изменений",
-        "CHANGELOG_TEXT" to "Версия 0.2-pre5\n\n• Персонализация никнеймов: Добавлена полная поддержка пользовательских имен в мультиплеере. Теперь вы можете указать свой собственный никнейм, видеть имя соперника прямо во время игры и сохранять его в архиве матчей.\n• Точный выбор защиты: Рады представить долгожданное исправление механики боя карт! Игроки теперь могут точно указать, какую именно карту они хотят побить на столе во всех режимах игры — для этого просто перетяните карту защиты прямо на желаемую карту атаки.\n• Синхронизация исходов боя: Исправлена ошибка в сетевой статистике, из-за которой результат матча (победа или поражение) дублировался обоим игрокам одинаково. Теперь каждый участник получает исключительно свои заслуженные итоги битвы.",
+        "CHANGELOG_TEXT" to "Версия 0.2 (Музыкальное обновление)\n\n• Звуковое оформление: В игру добавлены атмосферная музыка и звуковые эффекты раздачи карт, бросков, защиты и перевода.\n• Эволюция мультиплеера: Сетевой режим полностью исправен, доступен выбор никнеймов, ограничение в 2 игрока и игра в переводного дурака.\n• Языковая локализация: Официальный релиз итальянского языка и запуск бета-тестирования украинского языка.\n• Переводной дурак: Полноценный запуск в офлайн и онлайн режимах с улучшенными игровыми правилами.\n• Исправление ошибок: Решены проблемы с неработающим подключением, устранены баги блокировки экрана, синхронизации ников и стирания слова 'Player' при редактировании.",
         "BOT_DECENT_TITLE" to "ЛЮБИТЕЛЬСКИЙ БОТ",
         "BOT_DECENT_DESC" to "Разыгрывает простые допустимые комбинации. Отлично подходит для начинающих, желающих освоить базовый порядок карт в дураке.",
         "BOT_AI_TITLE" to "АНАЛИТИЧЕСКИЙ ИИ-БОТ",
-        "BOT_AI_DESC" to "Защищается с холодным расчетом. Отслеживает все сыгранные карты, бережет козыри для решающих моментов в конце игры и отдает приоритет стратегическому сбросу."
+        "BOT_AI_DESC" to "Защищается с холодным расчетом. Отслеживает все сыгранные карты, бережет козыри для решающих моментов в конце игры и отдает приоритет стратегическому сбросу.",
+        "SETTINGS" to "Настройки",
+        "SOUND_TAB" to "Звук",
+        "LANG_TAB" to "Язык",
+        "MUSIC_VOL" to "Музыка",
+        "SFX_VOL" to "Эффекты"
     )
 
     private val itTranslations = mapOf(
@@ -327,21 +374,66 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
         "STATUS_TITLE_LABEL" to "Aggiornamento audio",
         "CHANGELOG_BTN" to "Registro",
         "CHANGELOG_TITLE" to "Registro Modifiche",
-        "CHANGELOG_TEXT" to "Versione 0.2-pre5\n\n• Identità dei Giocatori: Aggiunto il supporto completo per i nomi utente personalizzati in multiplayer. Imposta il tuo nickname, guarda il nome del tuo avversario sul tavolo e vedi i dati salvati correttamente nello storico militare.\n• Precisione nel Difendere: Risolta una grave limitazione di gioco! Nelle difese su più card contemporanee, ora puoi scegliere con estrema precisione quali carte abbattere sul tavolo semplicemente rilasciando la tua carta sopra lo specifico bersaglio.\n• Registro Risultati Corretto: Risolto una sfasatura di telemetria per cui il risultato finale (vittoria/sconfitta) veniva erroneamente duplicato in modo identico per entrambi i peer. I risultati memorizzati ora sono calcolati individualmente e in modo equo.",
+        "CHANGELOG_TEXT" to "Versione 0.2 (Aggiornamento Audio & Musica)\n\n• Audio e Musica: Introdotte tracce musicali in tempo reale ed effetti sonori realistici per la distribuzione, il lancio delle carte, la difesa e il trasferimento.\n• Evoluzione Multiplayer: Il multiplayer locale è pienamente operativo in modalità Classica e Trasferimento con nickname personalizzati e limite di partecipanti.\n• Nuove Lingue: Rilascio ufficiale della lingua italiana e avvio della fase Beta per la lingua ucraina.\n• Modalità Trasferimento: Rilascio completo sia in singolo che in multiplayer locale, con regole di gioco raffinate.\n• Risoluzione dei Bug: Corretti l'errore di connessione di rete, il blocco dell'orientamento dello schermo, disallineamenti di nickname e il bug della casella di testo 'Player' bloccata.",
         "BOT_DECENT_TITLE" to "BOT AMATORIALE",
         "BOT_DECENT_DESC" to "Gioca combinazioni semplici e valide. Ottimo per i principianti che vogliono imparare la sequenza base delle carte del durak.",
         "BOT_AI_TITLE" to "BOT ANALITICO IA",
-        "BOT_AI_DESC" to "Difende con freddo calcolo. Tiene traccia di tutte le carte giocate, conserva i trionfi per le fasi finali e dà priorità a scarti strategici."
+        "BOT_AI_DESC" to "Difende con freddo calcolo. Tiene traccia di tutte le carte giocate, conserva i trionfi per le fasi finali e dà priorità a scarti strategici.",
+        "SETTINGS" to "Impostazioni",
+        "SOUND_TAB" to "Audio",
+        "LANG_TAB" to "Lingua",
+        "MUSIC_VOL" to "Musica",
+        "SFX_VOL" to "Effetti"
     )
 
     private val uaTranslations = mapOf(
-        "APP_TITLE" to "Дурник Оффлайн",
+        "APP_TITLE" to "Дурник Офлайн",
         "PLAY_OFFLINE" to "Грати Офлайн",
         "PLAY_ONLINE" to "Мультиплеєр (Wi-Fi)",
+        "BOT_SETUP_TITLE" to "Офлайн Налаштування",
+        "DIFFICULTY" to "Складність Бота",
+        "EASY" to "Легкий (Випадковий)",
+        "HARD" to "Складний (Аналітик)",
+        "START_GAME" to "Почати Гру",
+        "P2P_TITLE" to "Локальна мережа",
+        "NSD_STATUS" to "Пошук Wi-Fi",
+        "HOST_LOBBY" to "Створити Лоббі",
+        "MY_IP" to "Ваша IP адреса:",
+        "DISCOVERY_ACTIVE" to "Пошук хостів...",
+        "TAP_TO_CONNECT" to "Натисніть для підключення",
+        "MANUAL_CONNECT" to "Підключення по IP",
+        "ENTER_HOST_IP" to "Введіть IP адресу хоста",
+        "CONNECT_BTN" to "Увійти",
+        "WAITING_LOBBY" to "Лоббі відкрито. Очікування гравця...",
+        "DISCONNECTED" to "Відключено",
+        "CONNECTING" to "Підключення...",
+        "BACK" to "Назад",
+        "TAKE" to "Взяти Все",
+        "BITO" to "Бито / Пас",
+        "RESTART" to "Грати Знову",
+        "MENU" to "Головне Меню",
+        "DECK" to "Колода",
+        "TRUMP" to "Козир",
+        "STATS_TITLE" to "Архів Матчів",
+        "CLEAR_STATS" to "Очистити Списки",
+        "EMPTY_STATS" to "Історія матчів відсутня.",
+        "GAME_LOGS" to "Лог Битви",
+        "TURN_PLAYER" to "Ваш Хід",
+        "TURN_BOT" to "Бот думает...",
+        "TURN_OPPONENT" to "Хід Опонента",
+        "WIN_TITLE" to "ПЕРЕМОГА!",
+        "LOST_TITLE" to "ПОРАЗКА! ВИ ДУРНИК!",
+        "DRAW_TITLE" to "НІЧИЯ!",
+        "DISC_TITLE" to "Гравець відключився!",
         "STATUS_TITLE_LABEL" to "Музичне оновлення",
         "CHANGELOG_BTN" to "Список змін",
         "CHANGELOG_TITLE" to "Список змін",
-        "CHANGELOG_TEXT" to "Версія 0.2-pre5\n\n• Персоналізація нікнеймів: Додано повну підтримку користувацьких імен у мультиплеєрі. Тепер ви можете вказати власне ім'я, бачити нікнейм опонента під час гри та зберігати його в архіві боїв.\n• Точний вибір захисту: Виправлено важливе обмеження у захисті! Гравці тепер можуть точно вказувати, яку саме карту на столі вони хочуть побити у всіх режимах гри — просто перетягніть та опустіть свою карту захисту безпосередньо на бажану карту атаки.\n• Синхронізація результатів: Виправлено помилку в мережевій статистиці, через яку результат матчу (перемога чи поразка) дублювався для обох гравців однаково. Тепер кожен учасник отримує виключно свої заслужені підсумки битви."
+        "CHANGELOG_TEXT" to "Версія 0.2 (Музичне оновлення)\n\n• Аудіо та музика: Додано фонову музику та реалістичні звукові ефекти для роздачі карт, ходів, захисту та переведення.\n• Оновлення мультиплеєра: Мережева гра повністю працює у Класичному та Перевідному режимах, додано підтримку власних нікнеймів та ліміт гравців.\n• Нові мови: Офіційний реліз італійської мови та початок бета-тестування української мови.\n• Перевідний дурак: Повноцінний реліз в офлайн та онлайн режимах із покращеними правилами.\n• Виправлення багів: Виправлено помилки у з'єднанні мультиплеєра, блокування орієнтації екрана, збої синхронізації ніків та баг, через який слово 'Player' не стиралося у виборі імені.",
+        "SETTINGS" to "Налаштування",
+        "SOUND_TAB" to "Звук",
+        "LANG_TAB" to "Мова",
+        "MUSIC_VOL" to "Музика",
+        "SFX_VOL" to "Ефекти"
     )
 
     fun getString(key: String): String {
@@ -393,8 +485,9 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
         val deckSize = if (selectedOption == OfflineDeckOption.DECK_52) 52 else 36
         val customDeck = if (selectedOption == OfflineDeckOption.CUSTOM) _customDeckIds.value else null
         
+        val pName = if (_playerNickname.value.isBlank()) "Player" else _playerNickname.value
         engine.startMatch(
-            player1Name = _playerNickname.value,
+            player1Name = pName,
             player2Name = if (_isBotHard.value) "AI Bot" else "Bot",
             isBotGame = true,
             deckSize = deckSize,
@@ -402,6 +495,7 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
             customDeckIds = customDeck
         )
         _gameState.value = engine.createSnapshot().copy(opponentName = if (_isBotHard.value) "AI Bot" else "Bot")
+        com.example.audio.DurakAudioManager.playSFX(1)
         _currentScreen.value = Screen.GAME_TABLE
         triggerBotRoutineIfNeeded() // Fixes bot not making first move if bot goes first!
     }
@@ -418,8 +512,9 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             multiplayerManager.connectionState.collect { netState ->
                 if (netState == MultiplayerManager.State.CONNECTED && _activeMode.value == GameMode.ONLINE_HOST) {
+                    val pName = if (_playerNickname.value.isBlank()) "Player" else _playerNickname.value
                     // Send nickname immediately on connection
-                    multiplayerManager.sendMessage("NICKNAME:${_playerNickname.value}")
+                    multiplayerManager.sendMessage("NICKNAME:$pName")
                     
                     // Initialize game and send immediately
                     delay(300) // gentle networking stabilization delay
@@ -429,13 +524,14 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
                     val customDeck = if (deckOption == OfflineDeckOption.CUSTOM) _customDeckIds.value else null
                     val transferEnabled = (_mpLobbySubMode.value == OfflineSubMode.TRANSFER)
                     engine.startMatch(
-                        player1Name = _playerNickname.value,
+                        player1Name = pName,
                         player2Name = _opponentNickname.value,
                         isBotGame = false,
                         deckSize = deckSize,
                         isTransferMode = transferEnabled,
                         customDeckIds = customDeck
                     )
+                    com.example.audio.DurakAudioManager.playSFX(1)
                     pushHostStateToClient()
                     _currentScreen.value = Screen.GAME_TABLE
                 }
@@ -454,8 +550,10 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             multiplayerManager.connectionState.collect { netState ->
                 if (netState == MultiplayerManager.State.CONNECTED && _activeMode.value == GameMode.ONLINE_CLIENT) {
+                    val pName = if (_playerNickname.value.isBlank()) "Player" else _playerNickname.value
                     // Send nickname immediately on connection
-                    multiplayerManager.sendMessage("NICKNAME:${_playerNickname.value}")
+                    multiplayerManager.sendMessage("NICKNAME:$pName")
+                    com.example.audio.DurakAudioManager.playSFX(1)
                     _currentScreen.value = Screen.GAME_TABLE
                 }
             }
@@ -479,6 +577,7 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
             if (isUserAttacking) {
                 if (!intentTransferOnly) {
                     if (engine.performAttack("player", card)) {
+                        com.example.audio.DurakAudioManager.playSFX(2)
                         refreshLocalState()
                         triggerBotRoutineIfNeeded()
                     }
@@ -492,6 +591,7 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
 
                 if (canTransfer && intentTransferOnly) {
                     if (engine.performTransfer("player", card)) {
+                        com.example.audio.DurakAudioManager.playSFX(4)
                         refreshLocalState()
                         triggerBotRoutineIfNeeded()
                     }
@@ -504,6 +604,7 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
                     }
                     if (undefendedPair != null) {
                         if (engine.performDefense("player", undefendedPair.attackCard, card)) {
+                            com.example.audio.DurakAudioManager.playSFX(2)
                             refreshLocalState()
                             triggerBotRoutineIfNeeded()
                         }
@@ -516,6 +617,7 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
             if (isUserAttacking) {
                 if (!intentTransferOnly) {
                     if (engine.performAttack("player", card)) {
+                        com.example.audio.DurakAudioManager.playSFX(2)
                         pushHostStateToClient()
                     }
                 }
@@ -527,6 +629,7 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
 
                 if (canTransfer && intentTransferOnly) {
                     if (engine.performTransfer("player", card)) {
+                        com.example.audio.DurakAudioManager.playSFX(4)
                         pushHostStateToClient()
                     }
                 } else if (!intentTransferOnly) {
@@ -537,6 +640,7 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
                     }
                     if (undefendedPair != null) {
                         if (engine.performDefense("player", undefendedPair.attackCard, card)) {
+                            com.example.audio.DurakAudioManager.playSFX(2)
                             pushHostStateToClient()
                         }
                     }
@@ -561,6 +665,11 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
             }
             if (payload != null) {
                 multiplayerManager.sendMessage(payload)
+                if (intentTransferOnly) {
+                    com.example.audio.DurakAudioManager.playSFX(4)
+                } else {
+                    com.example.audio.DurakAudioManager.playSFX(2)
+                }
             }
         }
     }
@@ -695,10 +804,19 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
             _botThinking.value = true
             viewModelScope.launch {
                 delay(1200) // Thinking aesthetic lapse
+                val prevAttacker = engine.attackerId
+                val isTransferPossible = engine.isTransferMode && engine.tablePairs.isNotEmpty() && engine.tablePairs.all { it.defenseCard == null }
                 val BotSuccess = engine.makeBotMove(_isBotHard.value)
                 _botThinking.value = false
                 refreshLocalState()
                 if (BotSuccess) {
+                    if (isTransferPossible && engine.attackerId != prevAttacker) {
+                        com.example.audio.DurakAudioManager.playSFX(4) // Bot transferred cards
+                    } else if (engine.tablePairs.isEmpty() && prevAttacker != engine.attackerId) {
+                        // Bito happened, no card was thrown by bot on table in this sub-step
+                    } else {
+                        com.example.audio.DurakAudioManager.playSFX(3) // Bot threw/beat card
+                    }
                     // Loop bot moves (e.g., if bot defended, it might also attack next right away)
                     triggerBotRoutineIfNeeded()
                 }
@@ -733,6 +851,7 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
                     val cardData = msg.replace("ACTION_ATTACK:", "")
                     val card = NetworkProtocol.decodeCard(cardData)
                     if (card != null && engine.performAttack("opponent", card)) {
+                        com.example.audio.DurakAudioManager.playSFX(3)
                         stateChanged = true
                     }
                 }
@@ -755,6 +874,7 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
                         val attackCard = NetworkProtocol.decodeCard(parts[0])
                         val defenseCard = NetworkProtocol.decodeCard(parts[1])
                         if (attackCard != null && defenseCard != null && engine.performDefense("opponent", attackCard, defenseCard)) {
+                            com.example.audio.DurakAudioManager.playSFX(3)
                             stateChanged = true
                         }
                     }
@@ -763,6 +883,7 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
                     val cardData = msg.replace("ACTION_TRANSFER:", "")
                     val card = NetworkProtocol.decodeCard(cardData)
                     if (card != null && engine.performTransfer("opponent", card)) {
+                        com.example.audio.DurakAudioManager.playSFX(4)
                         stateChanged = true
                     }
                 }
@@ -782,6 +903,7 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
             }
         } else {
             // Client processes full state push from Host
+            val oldSnapshot = _gameState.value
             val statePayload = NetworkProtocol.deserializeState(msg)
             if (statePayload != null) {
                 val isClientAttacking = (statePayload.attackerId == "opponent")
@@ -808,6 +930,26 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
                 
                 _gameState.value = currentSnapshot
                 checkAndPersistRoomResult(currentSnapshot)
+
+                // Let's trigger opponent/host plays on Client device
+                if (oldSnapshot.matchStatus == MatchStatus.PLAYING) {
+                    val oldSize = oldSnapshot.tablePairs.size
+                    val newSize = currentSnapshot.tablePairs.size
+                    
+                    val oldDefCount = oldSnapshot.tablePairs.count { it.defenseCard != null }
+                    val newDefCount = currentSnapshot.tablePairs.count { it.defenseCard != null }
+                    
+                    if (newSize > oldSize) {
+                        val attackerChanged = oldSnapshot.attackerPlayerId != currentSnapshot.attackerPlayerId
+                        if (currentSnapshot.isTransferMode && attackerChanged && oldSize > 0) {
+                            com.example.audio.DurakAudioManager.playSFX(4) // Opponent transferred cards
+                        } else if (!currentSnapshot.isLocalTurn) {
+                            com.example.audio.DurakAudioManager.playSFX(3) // Opponent attacks
+                        }
+                    } else if (newDefCount > oldDefCount && !currentSnapshot.isLocalTurn) {
+                        com.example.audio.DurakAudioManager.playSFX(3) // Opponent defends
+                    }
+                }
             }
         }
     }

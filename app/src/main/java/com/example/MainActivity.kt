@@ -24,5 +24,15 @@ class MainActivity : ComponentActivity() {
       }
     }
   }
+
+  override fun onPause() {
+    super.onPause()
+    com.example.audio.DurakAudioManager.pauseMusic()
+  }
+
+  override fun onResume() {
+    super.onResume()
+    com.example.audio.DurakAudioManager.resumeMusic()
+  }
 }
 

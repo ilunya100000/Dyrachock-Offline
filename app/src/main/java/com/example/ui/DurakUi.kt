@@ -356,7 +356,7 @@ fun MainMenuScreen(viewModel: DurakViewModel, statsList: List<GameStat>) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "0.2.1",
+                    text = "0.2.1_01",
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f)

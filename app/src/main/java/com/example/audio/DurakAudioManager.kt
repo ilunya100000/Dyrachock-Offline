@@ -22,6 +22,7 @@ object DurakAudioManager {
 
     private var musicPlayer: MediaPlayer? = null
     private var isPlayingMusic = false
+    private var isPaused = false
     private var currentMusicType = 0 // 5 for standard, 6 for endgame
 
     fun initialize(context: Context) {
@@ -99,6 +100,7 @@ object DurakAudioManager {
 
     fun stopMusic() {
         isPlayingMusic = false
+        isPaused = false
         try {
             musicPlayer?.let { mp ->
                 if (mp.isPlaying) {
@@ -111,5 +113,33 @@ object DurakAudioManager {
         }
         musicPlayer = null
         currentMusicType = 0
+    }
+
+    fun pauseMusic() {
+        if (isPlayingMusic) {
+            try {
+                musicPlayer?.let { mp ->
+                    if (mp.isPlaying) {
+                        mp.pause()
+                        isPaused = true
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("DurakAudio", "Failed to pause music", e)
+            }
+        }
+    }
+
+    fun resumeMusic() {
+        if (isPlayingMusic && isPaused) {
+            try {
+                musicPlayer?.let { mp ->
+                    mp.start()
+                    isPaused = false
+                }
+            } catch (e: Exception) {
+                Log.e("DurakAudio", "Failed to resume music", e)
+            }
+        }
     }
 }

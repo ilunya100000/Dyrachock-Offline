@@ -356,7 +356,7 @@ fun MainMenuScreen(viewModel: DurakViewModel, statsList: List<GameStat>) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "0.2.1_01",
+                    text = "0.2.2",
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f)
@@ -482,10 +482,10 @@ fun MainMenuScreen(viewModel: DurakViewModel, statsList: List<GameStat>) {
                                             else -> "June"
                                         },
                                         when (appLanguage) {
-                                            AppLanguage.RU -> "Тестовые версии(0.4.x, 0.5.x)"
-                                            AppLanguage.UA -> "Тестові версії(0.4.x, 0.5.x)"
-                                            AppLanguage.IT -> "Versioni di test(0.4.x, 0.5.x)"
-                                            else -> "Testing versions(0.4.x, 0.5.x)"
+                                            AppLanguage.RU -> "Тестовые версии(0.3.x, 0.4.x, 0.5.x)"
+                                            AppLanguage.UA -> "Тестові версії(0.3.x, 0.4.x, 0.5.x)"
+                                            AppLanguage.IT -> "Versioni di test(0.3.x, 0.4.x, 0.5.x)"
+                                            else -> "Testing versions(0.3.x, 0.4.x, 0.5.x)"
                                         },
                                         Icons.Default.BugReport
                                     ),
@@ -497,10 +497,10 @@ fun MainMenuScreen(viewModel: DurakViewModel, statsList: List<GameStat>) {
                                             else -> "July"
                                         },
                                         when (appLanguage) {
-                                            AppLanguage.RU -> "Обновление интерфейса(0.6, 0.7)"
-                                            AppLanguage.UA -> "Оновлення інтерфейсу(0.6, 0.7)"
-                                            AppLanguage.IT -> "Aggiornamento dell'interfaccia(0.6, 0.7)"
-                                            else -> "Interface design overhaul(0.6, 0.7)"
+                                            AppLanguage.RU -> "Обновление интерфейса(0.6.x, 0.7.x)"
+                                            AppLanguage.UA -> "Оновлення інтерфейсу(0.6.x, 0.7.x)"
+                                            AppLanguage.IT -> "Aggiornamento dell'interfaccia(0.6.x, 0.7.x)"
+                                            else -> "Interface design overhaul(0.6.x, 0.7.x)"
                                         },
                                         Icons.Default.Palette
                                     ),
@@ -536,7 +536,85 @@ fun MainMenuScreen(viewModel: DurakViewModel, statsList: List<GameStat>) {
                                     )
                                 )
 
-                                milestones.forEach { (month, task, icon) ->
+                                val activeMilestones = listOf(
+                                    Triple(
+                                        when (appLanguage) {
+                                            AppLanguage.RU -> "Июнь"
+                                            AppLanguage.UA -> "Червень"
+                                            AppLanguage.IT -> "Giugno"
+                                            else -> "June"
+                                        },
+                                        when (appLanguage) {
+                                            AppLanguage.RU -> "Версии, дорабатывающие базовую игру(0.3.x, 0.4.x, 0.5.x)"
+                                            AppLanguage.UA -> "Версії, що доопрацьовують базову гру(0.3.x, 0.4.x, 0.5.x)"
+                                            AppLanguage.IT -> "Versioni che perfezionano il gioco base(0.3.x, 0.4.x, 0.5.x)"
+                                            else -> "Versions refactoring & polishing the base game(0.3.x, 0.4.x, 0.5.x)"
+                                        },
+                                        Icons.Default.BugReport
+                                    ),
+                                    Triple(
+                                        when (appLanguage) {
+                                             AppLanguage.RU -> "0.3 - Многопользовательское обновление 📶"
+                                             AppLanguage.UA -> "0.3 - Багатокористувацьке оновлення 📶"
+                                             AppLanguage.IT -> "0.3 - Aggiornamento multigiocatore 📶"
+                                             else -> "0.3 - Multiplayer Update 📶"
+                                        },
+                                        when (appLanguage) {
+                                             AppLanguage.RU -> "В этом обновлении будет наконец-то доступна игра до 6 человек, быстрый чат во время игры, улучшение меню лобби."
+                                             AppLanguage.UA -> "У цьому оновленні нарешті буде доступна гра до 6 осіб, швидкий чат під час гри, покращення меню лобі."
+                                             AppLanguage.IT -> "Questo aggiornamento porterà finalmente il gioco fino a 6 giocatori, la chat rapida durante la partita e miglioramenti al menu della lobby."
+                                             else -> "This update will finally bring play up to 6 players, quick chat during the game, and lobby menu improvements."
+                                        },
+                                        Icons.Default.Wifi
+                                    ),
+                                    Triple(
+                                        when (appLanguage) {
+                                            AppLanguage.RU -> "Июль"
+                                            AppLanguage.UA -> "Липень"
+                                            AppLanguage.IT -> "Luglio"
+                                            else -> "July"
+                                        },
+                                        when (appLanguage) {
+                                            AppLanguage.RU -> "Обновление интерфейса(0.6.x, 0.7.x)"
+                                            AppLanguage.UA -> "Оновлення інтерфейсу(0.6.x, 0.7.x)"
+                                            AppLanguage.IT -> "Aggiornamento dell'interfaccia(0.6.x, 0.7.x)"
+                                            else -> "Interface design overhaul(0.6.x, 0.7.x)"
+                                        },
+                                        Icons.Default.Palette
+                                    ),
+                                    Triple(
+                                        when (appLanguage) {
+                                            AppLanguage.RU -> "Август"
+                                            AppLanguage.UA -> "Серпень"
+                                            AppLanguage.IT -> "Agosto"
+                                            else -> "August"
+                                        },
+                                        when (appLanguage) {
+                                            AppLanguage.RU -> "Подготовка к релизу(0.8, 0.9.x)"
+                                            AppLanguage.UA -> "Підготовка до релізу(0.8, 0.9.x)"
+                                            AppLanguage.IT -> "Preparazione al rilascio(0.8, 0.9.x)"
+                                            else -> "Preparing for release(0.8, 0.9.x)"
+                                        },
+                                        Icons.Default.RocketLaunch
+                                    ),
+                                    Triple(
+                                        when (appLanguage) {
+                                            AppLanguage.RU -> "Сентябрь"
+                                            AppLanguage.UA -> "Вересень"
+                                            AppLanguage.IT -> "Settembre"
+                                            else -> "September"
+                                         },
+                                         when (appLanguage) {
+                                             AppLanguage.RU -> "Релиз(1.0) 🎉"
+                                             AppLanguage.UA -> "Реліз(1.0) 🎉"
+                                             AppLanguage.IT -> "Rilascio ufficiale(1.0) 🎉"
+                                             else -> "Official Release(1.0) 🎉"
+                                         },
+                                         Icons.Default.Star
+                                     )
+                                 )
+ 
+                                 activeMilestones.forEach { (month, task, icon) ->
                                     Card(
                                         modifier = Modifier.fillMaxWidth(),
                                         colors = CardDefaults.cardColors(
@@ -1680,12 +1758,19 @@ fun GameTableScreen(viewModel: DurakViewModel) {
     var transferZoneBounds by remember { mutableStateOf<Rect?>(null) }
     var handScrollOffsetPx by remember { mutableStateOf(0f) }
 
+    val lateGameActive = snapshot.deckSize == 0
+    val bgColors = if (lateGameActive) {
+        listOf(Color(0xFF2C1612), Color(0xFF0E0706)) // Deep warm embers for the late game climax
+    } else {
+        listOf(Color(0xFF1E2124), Color(0xFF0F1113)) // Classic slate
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(
                 Brush.radialGradient(
-                    colors = listOf(Color(0xFF1E2124), Color(0xFF0F1113)),
+                    colors = bgColors,
                     center = Offset(500f, 300f),
                     radius = 1200f
                 )
@@ -2112,7 +2197,7 @@ fun GameTableScreen(viewModel: DurakViewModel) {
                             )
                         }
 
-                        Row(
+                        if (false) Row(
                             modifier = Modifier
                                 .background(Color.Black.copy(alpha = 0.45f), RoundedCornerShape(12.dp))
                                 .clickable { showLogs = !showLogs }

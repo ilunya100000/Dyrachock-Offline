@@ -41,7 +41,8 @@ object NetworkProtocol {
     fun serializeState(
         snapshot: GameStateSnapshot,
         hostHand: List<Card>,
-        clientHand: List<Card>
+        clientHand: List<Card>,
+        hostNickname: String
     ): String {
         val trumpStr = encodeCard(snapshot.trumpCard)
         val trumpSuitStr = snapshot.trumpSuit.name
@@ -70,7 +71,8 @@ object NetworkProtocol {
             append("TABLE:").append(tablePairsStr).append("##")
             append("HOST_HAND:").append(hostHandStr).append("##")
             append("CLIENT_HAND:").append(clientHandStr).append("##")
-            append("ISTRANSFER:").append(snapshot.isTransferMode.toString())
+            append("ISTRANSFER:").append(snapshot.isTransferMode.toString()).append("##")
+            append("HOST_NICK:").append(hostNickname)
         }
     }
 
@@ -121,6 +123,7 @@ object NetworkProtocol {
             }
 
             val isTransferMode = map["ISTRANSFER"]?.toBooleanStrictOrNull() ?: false
+            val hostNick = map["HOST_NICK"] ?: "Host"
 
             return StatePayload(
                 trumpCard = trumpCard,
@@ -135,7 +138,8 @@ object NetworkProtocol {
                 tablePairs = tablePairs,
                 hostHand = hostHand,
                 clientHand = clientHand,
-                isTransferMode = isTransferMode
+                isTransferMode = isTransferMode,
+                hostNick = hostNick
             )
         } catch (e: Exception) {
             return null
@@ -155,7 +159,8 @@ object NetworkProtocol {
         val tablePairs: List<CardPair>,
         val hostHand: List<Card>,
         val clientHand: List<Card>,
-        val isTransferMode: Boolean
+        val isTransferMode: Boolean,
+        val hostNick: String = "Host"
     )
 
     // Action types to send from Client to Host OR Host to Client

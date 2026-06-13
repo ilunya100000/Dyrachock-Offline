@@ -403,7 +403,7 @@ class DurakEngine {
     }
 
     // Return the state snapshot for the UI View
-    fun createSnapshot(): GameStateSnapshot {
+    fun createSnapshot(opponentName: String = "Opponent"): GameStateSnapshot {
         val isLocalAttacking = (attackerId == "player")
         val canBito = isLocalAttacking && tablePairs.isNotEmpty() && tablePairs.all { it.defenseCard != null }
         val canTake = !isLocalAttacking && tablePairs.isNotEmpty() && tablePairs.any { it.defenseCard == null }
@@ -417,7 +417,7 @@ class DurakEngine {
             isLocalTurn = if (isLocalAttacking) tablePairs.all { it.defenseCard != null } || tablePairs.isEmpty() else tablePairs.any { it.defenseCard == null },
             localHand = playerHand.toList(),
             opponentHandSize = opponentHand.size,
-            opponentName = "Opponent",
+            opponentName = opponentName,
             matchStatus = matchStatus,
             attackerPlayerId = attackerId,
             gameLog = gameLogEn.toList(),

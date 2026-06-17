@@ -25,7 +25,7 @@
 
 ### 🛠️ Текущий этап (Ветка v0.2.x)
 * [x] **v0.2.2 (Grand Milestone Update):** Добавление Late Game Theme, перенос логов в архив, исправление багов матчмейкинга и релиз первого Windows-порта.
-* [ ] **v0.2.3 (Финал музыкального обновления):** Финальная полировка аудио-баланса, закрытие мелких шероховатостей и подготовка базы к глобальному сетевому апдейту.
+* [x] **v0.2.3 (Финал музыкального обновления):** Финальная полировка аудио-баланса, закрытие мелких шероховатостей и подготовка базы к глобальному сетевому апдейту.
 
 ### 💥 Будущее (Ветка v0.3)
 * [ ] **Многопользовательское обновление:**
@@ -62,7 +62,7 @@
 
 ### 🛠️ Current Stage (v0.2.x Branch)
 * [x] **v0.2.2 (Grand Milestone Update):** Late Game Theme introduction, battle logs moved to archives, matchmaking bug fixes, and the first official Windows port release.
-* [ ] **v0.2.3 (Musical Update Finale):** Final audio balancing, minor polish, and cementing the absolute stability of the 0.2 branch.
+* [x] **v0.2.3 (Musical Update Finale):** Final audio balancing, minor polish, and cementing the absolute stability of the 0.2 branch.
 
 ### 💥 The Future (v0.3 Branch)
 * [ ] **The Multiplayer Update:**

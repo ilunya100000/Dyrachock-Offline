@@ -24,6 +24,7 @@ class DurakEngine {
 
     var matchStatus: MatchStatus = MatchStatus.NOT_STARTED
     var isTransferMode: Boolean = false
+    var isDefenderTaking: Boolean = false
     val gameLogEn: MutableList<String> = mutableListOf()
     val gameLogRu: MutableList<String> = mutableListOf()
 
@@ -43,6 +44,7 @@ class DurakEngine {
     // Start a new match
     fun startMatch(player1Name: String, player2Name: String, isBotGame: Boolean, deckSize: Int = 36, isTransferMode: Boolean = false, customDeckIds: Set<String>? = null) {
         this.isTransferMode = isTransferMode
+        this.isDefenderTaking = false
         deck.clear()
         tablePairs.clear()
         playerHand.clear()
@@ -177,6 +179,7 @@ class DurakEngine {
     fun performDefense(playerId: String, attackCard: Card, defenseCard: Card): Boolean {
         if (matchStatus != MatchStatus.PLAYING) return false
         if (defenderId != playerId) return false
+        if (isDefenderTaking) return false
 
         val hand = if (playerId == "player") playerHand else opponentHand
         if (!hand.contains(defenseCard)) return false
@@ -199,23 +202,10 @@ class DurakEngine {
         if (matchStatus != MatchStatus.PLAYING) return false
         if (defenderId != playerId) return false
         if (tablePairs.isEmpty()) return false
+        if (isDefenderTaking) return false
 
-        log("${if (playerId == "player") "You" else "Opponent"} took the cards.", "${if (playerId == "player") "Вы взяли" else "Оппонент взял"} карты.")
-
-        // Transfer all cards (attack & defense) to the defender's hand
-        val defenderHand = if (playerId == "player") playerHand else opponentHand
-        for (pair in tablePairs) {
-            defenderHand.add(pair.attackCard)
-            pair.defenseCard?.let { defenderHand.add(it) }
-        }
-        tablePairs.clear()
-
-        // End of round: deal cards from deck up to 6
-        drawCardsLifecycle()
-
-        // Attacker remains the same since the defender took the cards and lost their attack turn!
-        // No turn switch: the attacker remains attacker, defender remains defender.
-        checkWinCondition()
+        isDefenderTaking = true
+        log("${if (playerId == "player") "You" else "Opponent"} decided to take cards.", "${if (playerId == "player") "Вы решили взять" else "Оппонент решил взять"} карты.")
         return true
     }
 
@@ -224,6 +214,26 @@ class DurakEngine {
         if (matchStatus != MatchStatus.PLAYING) return false
         if (attackerId != playerId) return false
         if (tablePairs.isEmpty()) return false
+
+        if (isDefenderTaking) {
+            log("End of turn: Defender took all cards.", "Конец хода: Защищающийся забрал все карты.")
+
+            // Transfer all cards (attack & defense) to the defender's hand
+            val defenderHand = if (defenderId == "player") playerHand else opponentHand
+            for (pair in tablePairs) {
+                defenderHand.add(pair.attackCard)
+                pair.defenseCard?.let { defenderHand.add(it) }
+            }
+            tablePairs.clear()
+            isDefenderTaking = false
+
+            // End of round: deal cards from deck up to 6
+            drawCardsLifecycle()
+
+            // Attacker remains the same since the defender took the cards and lost their attack turn!
+            checkWinCondition()
+            return true
+        }
 
         // All cards on table must be defended
         val allDefended = tablePairs.all { it.defenseCard != null }
@@ -324,7 +334,7 @@ class DurakEngine {
             } else {
                 // Throw additional valid cards or Bito
                 val allDefended = tablePairs.all { it.defenseCard != null }
-                if (allDefended) {
+                if (allDefended || isDefenderTaking) {
                     // Check if can toss some more valid cards
                     val validTossCards = opponentHand.filter { card ->
                         tablePairs.any { it.attackCard.rank == card.rank || it.defenseCard?.rank == card.rank }
@@ -340,7 +350,7 @@ class DurakEngine {
                         }
                         return performAttack("opponent", cardToss)
                     } else {
-                        // End of turn
+                        // End of turn (or pass and defender takes all)
                         return performBito("opponent")
                     }
                 } else {
@@ -405,8 +415,14 @@ class DurakEngine {
     // Return the state snapshot for the UI View
     fun createSnapshot(opponentName: String = "Opponent"): GameStateSnapshot {
         val isLocalAttacking = (attackerId == "player")
-        val canBito = isLocalAttacking && tablePairs.isNotEmpty() && tablePairs.all { it.defenseCard != null }
-        val canTake = !isLocalAttacking && tablePairs.isNotEmpty() && tablePairs.any { it.defenseCard == null }
+        val canBito = isLocalAttacking && tablePairs.isNotEmpty() && (tablePairs.all { it.defenseCard != null } || isDefenderTaking)
+        val canTake = !isLocalAttacking && tablePairs.isNotEmpty() && tablePairs.any { it.defenseCard == null } && !isDefenderTaking
+
+        val isLocalTurnAction = if (isLocalAttacking) {
+            tablePairs.all { it.defenseCard != null } || tablePairs.isEmpty() || isDefenderTaking
+        } else {
+            tablePairs.any { it.defenseCard == null } && !isDefenderTaking
+        }
 
         return GameStateSnapshot(
             trumpCard = trumpCard,
@@ -414,7 +430,7 @@ class DurakEngine {
             deckSize = deck.size,
             tablePairs = tablePairs.toList(),
             discardPileSize = discardPileSize,
-            isLocalTurn = if (isLocalAttacking) tablePairs.all { it.defenseCard != null } || tablePairs.isEmpty() else tablePairs.any { it.defenseCard == null },
+            isLocalTurn = isLocalTurnAction,
             localHand = playerHand.toList(),
             opponentHandSize = opponentHand.size,
             opponentName = opponentName,
@@ -425,7 +441,8 @@ class DurakEngine {
             gameLogRu = gameLogRu.toList(),
             canTake = canTake,
             canBito = canBito,
-            isTransferMode = isTransferMode
+            isTransferMode = isTransferMode,
+            isDefenderTaking = isDefenderTaking
         )
     }
 

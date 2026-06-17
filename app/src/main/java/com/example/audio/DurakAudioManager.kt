@@ -47,6 +47,7 @@ object DurakAudioManager {
             2 -> com.example.R.raw.you_play
             3 -> com.example.R.raw.opponent
             4 -> com.example.R.raw.playing_cards_transfer
+            7 -> com.example.R.raw.cards_take
             else -> return
         }
 

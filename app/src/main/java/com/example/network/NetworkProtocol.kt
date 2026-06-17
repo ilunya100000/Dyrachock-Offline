@@ -72,6 +72,7 @@ object NetworkProtocol {
             append("HOST_HAND:").append(hostHandStr).append("##")
             append("CLIENT_HAND:").append(clientHandStr).append("##")
             append("ISTRANSFER:").append(snapshot.isTransferMode.toString()).append("##")
+            append("ISTAKING:").append(snapshot.isDefenderTaking.toString()).append("##")
             append("HOST_NICK:").append(hostNickname)
         }
     }
@@ -123,6 +124,7 @@ object NetworkProtocol {
             }
 
             val isTransferMode = map["ISTRANSFER"]?.toBooleanStrictOrNull() ?: false
+            val isDefenderTaking = map["ISTAKING"]?.toBooleanStrictOrNull() ?: false
             val hostNick = map["HOST_NICK"] ?: "Host"
 
             return StatePayload(
@@ -139,6 +141,7 @@ object NetworkProtocol {
                 hostHand = hostHand,
                 clientHand = clientHand,
                 isTransferMode = isTransferMode,
+                isDefenderTaking = isDefenderTaking,
                 hostNick = hostNick
             )
         } catch (e: Exception) {
@@ -160,6 +163,7 @@ object NetworkProtocol {
         val hostHand: List<Card>,
         val clientHand: List<Card>,
         val isTransferMode: Boolean,
+        val isDefenderTaking: Boolean = false,
         val hostNick: String = "Host"
     )
 

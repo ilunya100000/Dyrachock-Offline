@@ -59,6 +59,8 @@ import com.example.viewmodel.AppLanguage
 import com.example.viewmodel.DurakViewModel
 import java.text.SimpleDateFormat
 import java.util.*
+import androidx.compose.ui.res.painterResource
+import androidx.compose.foundation.Image
 
 sealed interface TableFlowItem {
     data class PairItem(val pair: CardPair) : TableFlowItem
@@ -84,6 +86,7 @@ fun DurakApp(viewModel: DurakViewModel) {
             label = "ScreenTransition"
         ) { screen ->
             when (screen) {
+                DurakViewModel.Screen.SPLASH -> SplashScreen(viewModel)
                 DurakViewModel.Screen.MAIN_MENU -> MainMenuScreen(viewModel, statsList)
                 DurakViewModel.Screen.OFFLINE_SETUP -> OfflineSetupScreen(viewModel)
                 DurakViewModel.Screen.MULTIPLAYER_HUB -> MultiplayerHubScreen(viewModel)
@@ -92,6 +95,246 @@ fun DurakApp(viewModel: DurakViewModel) {
                 DurakViewModel.Screen.CUSTOM_DECK -> CustomDeckSelectionScreen(viewModel)
             }
         }
+    }
+}
+
+@OptIn(ExperimentalAnimationApi::class)
+@Composable
+fun SplashScreen(viewModel: DurakViewModel) {
+    val progress by viewModel.splashProgress.collectAsStateWithLifecycle()
+    val appLanguage by viewModel.appLanguage.collectAsStateWithLifecycle()
+
+    // Animating scale and rotation of elements for eye-catching UI entrance
+    val infiniteTransition = rememberInfiniteTransition(label = "SplashAnimation")
+    val cardsPulseScale by infiniteTransition.animateFloat(
+        initialValue = 0.95f,
+        targetValue = 1.05f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1200, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "Pulse"
+    )
+
+    val suitRotation by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(6000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "Rotate"
+    )
+
+    // Tips translated beautifully
+    val tips = when (appLanguage) {
+        AppLanguage.RU -> listOf(
+            "Совет: Берёте карты? Помните, соперник может подкинуть ещё!",
+            "Совет: Приберегите козыри крупного достоинства для финала партии.",
+            "Совет: В переводном режиме переведите атаку картой того же ранга.",
+            "Совет: Игра на высокой сложности ИИ проверит ваши лучшие навыки!"
+        )
+        AppLanguage.UA -> listOf(
+            "Порада: Берете карти? Пам'ятайте, суперник може підкинути ще!",
+            "Порада: Збережіть великі козирі для фіналу партії.",
+            "Порада: У перевідному режимі переведіть атаку картою того ж рангу.",
+            "Порада: Гра на високій складності ШІ перевірить ваші найкращі навички!"
+        )
+        AppLanguage.IT -> listOf(
+            "Consiglio: Prendi le carte? Ricorda, l'avversario può scartarne altre!",
+            "Consiglio: Conserva le briscole di alto valore per la fase finale.",
+            "Consiglio: Nella modalità trasferimento, passa l'attacco con una carta dello stesso valore.",
+            "Consiglio: Giocare a difficoltà Difficile metterà alla prova le tue abilità!"
+        )
+        else -> listOf(
+            "Tip: Taking cards? Remember, your opponent can toss extra matching ranks!",
+            "Tip: Save high-value trump cards for the crucial late-game phase.",
+            "Tip: In Transfer mode, pass the attack to the next player using a matching rank.",
+            "Tip: The Hard AI Bot difficulty level will fully test your strategy!"
+        )
+    }
+
+    val currentTipIndex = when {
+        progress < 0.25f -> 0
+        progress < 0.50f -> 1
+        progress < 0.75f -> 2
+        else -> 3
+    }
+    val currentTip = tips[currentTipIndex]
+
+    val titleText = when (appLanguage) {
+        AppLanguage.RU -> "Дурачок Оффлайн"
+        AppLanguage.UA -> "Дурник Офлайн"
+        AppLanguage.IT -> "Durak Offline"
+        else -> "Dyrachok Offline"
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(
+                        Color(0xFF0D2516), // Extra deep forest casino green
+                        Color(0xFF06150C), // Cosmic almost black green
+                        Color(0xFF030D08)
+                    )
+                )
+            )
+            .padding(32.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            // Rounded and styled Game Icon
+            Box(
+                modifier = Modifier
+                    .size(160.dp)
+                    .graphicsLayer {
+                        scaleX = cardsPulseScale
+                        scaleY = cardsPulseScale
+                    }
+                    .shadow(16.dp, RoundedCornerShape(24.dp), clip = true)
+                    .background(Color(0xFF14301B), RoundedCornerShape(24.dp))
+                    .border(2.dp, Color(0xFFE2C974), RoundedCornerShape(24.dp)) // Royal gold border
+                    .padding(8.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Image(
+                    painter = painterResource(id = com.example.R.drawable.durak_logo_1779977268973),
+                    contentDescription = "Durak Championship Logo",
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
+
+            Spacer(modifier = Modifier.height(28.dp))
+
+            // Game Title
+            Text(
+                text = titleText,
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFFE2C974), // Royal gold Accent Color desaturated
+                letterSpacing = 2.sp,
+                textAlign = TextAlign.Center
+            )
+
+            Text(
+                text = "Version 0.2.3",
+                fontSize = 12.sp,
+                fontStyle = FontStyle.Italic,
+                color = Color(0xFF909094).copy(alpha = 0.8f),
+                modifier = Modifier.padding(top = 4.dp)
+            )
+
+            Spacer(modifier = Modifier.height(48.dp))
+
+            // Smooth high-end loading bar
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.widthIn(max = 280.dp)
+            ) {
+                // Percentage representation
+                Text(
+                    text = "${(progress * 100).roundToInt()}%",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    fontFamily = FontFamily.Monospace,
+                    color = Color(0xFFE2C974)
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Custom premium progress bar
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(8.dp)
+                        .background(Color(0xFF1C2C21), RoundedCornerShape(4.dp))
+                        .border(1.dp, Color(0xFF2C4A36), RoundedCornerShape(4.dp))
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .fillMaxWidth(progress)
+                            .background(
+                                Brush.horizontalGradient(
+                                    colors = listOf(
+                                        Color(0xFFFFA500), // Orange gold
+                                        Color(0xFFE2C974)  // Royal yellow gold
+                                    )
+                                ),
+                                RoundedCornerShape(4.dp)
+                            )
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Spinning suit elements representing loading activity
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    val suits = listOf("♥", "♦", "♣", "♠")
+                    suits.forEachIndexed { sIdx, suitSymbol ->
+                        val spinFactor = if (sIdx % 2 == 0) 1f else -1f
+                        Text(
+                            text = suitSymbol,
+                            color = if (suitSymbol == "♥" || suitSymbol == "♦") Color(0xFFE53935) else Color(0xFFDCDCDC),
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.graphicsLayer {
+                                rotationZ = suitRotation * spinFactor
+                            }
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(40.dp))
+
+            // Info Tip Box
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 72.dp)
+                    .background(Color(0x2214301B), RoundedCornerShape(16.dp))
+                    .border(1.dp, Color(0x33E2C974), RoundedCornerShape(16.dp))
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                AnimatedContent(
+                    targetState = currentTip,
+                    transitionSpec = {
+                        fadeIn(animationSpec = tween(300)) with fadeOut(animationSpec = tween(300))
+                    },
+                    label = "TipTransition"
+                ) { tip ->
+                    Text(
+                        text = tip,
+                        fontSize = 13.sp,
+                        color = Color(0xFFD1E4FF),
+                        textAlign = TextAlign.Center,
+                        lineHeight = 18.sp
+                    )
+                }
+            }
+        }
+        
+        // Creator/Developer mention at the bottom of splash screen
+        Text(
+            text = "©Ilunya",
+            fontSize = 12.sp,
+            color = Color(0xFFE2C974).copy(alpha = 0.5f),
+            fontWeight = FontWeight.Medium,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 12.dp)
+        )
     }
 }
 
@@ -356,7 +599,7 @@ fun MainMenuScreen(viewModel: DurakViewModel, statsList: List<GameStat>) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "0.2.2",
+                    text = "0.2.3",
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f)
@@ -2237,10 +2480,34 @@ fun GameTableScreen(viewModel: DurakViewModel) {
             ) {
                 // Turn Status Text inside Footer
                 Text(
-                    text = if (snapshot.isLocalTurn) {
-                        if (appLanguage == AppLanguage.RU) "ВАШ ХОД" else if (appLanguage == AppLanguage.IT) "TUO TURNO" else "YOUR TURN"
+                    text = if (snapshot.isDefenderTaking) {
+                        if (snapshot.isLocalTurn) {
+                            when (appLanguage) {
+                                AppLanguage.RU -> "СОПЕРНИК БЕРЕТ КАРТЫ (ДОКИНУТЬ)"
+                                AppLanguage.UA -> "СУПЕРНИК БЕРЕ КАРТИ (ДОКИНУТИ)"
+                                AppLanguage.IT -> "L'AVVERSARIO PRENDE LE CARTE (SCARTA)"
+                                else -> "OPPONENT IS TAKING (TOSS CARDS)"
+                            }
+                        } else {
+                            when (appLanguage) {
+                                AppLanguage.RU -> "ВЫ БЕРЕТЕ КАРТЫ (ОЖИДАНИЕ)"
+                                AppLanguage.UA -> "ВИ БЕРЕТЕ КАРТИ (ОЧІКУВАННЯ)"
+                                AppLanguage.IT -> "PRENDI LE CARTE (ATTESA)"
+                                else -> "YOU ARE TAKING (WAITING)"
+                            }
+                        }
+                    } else if (snapshot.isLocalTurn) {
+                        if (appLanguage == AppLanguage.RU) "ВАШ ХОД" 
+                        else if (appLanguage == AppLanguage.UA) "ВАШ ХІД"
+                        else if (appLanguage == AppLanguage.IT) "TUO TURNO" 
+                        else "YOUR TURN"
                     } else {
-                        if (appLanguage == AppLanguage.RU) "ХОД БОТА" else if (appLanguage == AppLanguage.IT) "TURNO DEL BOT" else "BOT'S TURN"
+                        val isMultiplayer = viewModel.activeMode.value != GameMode.OFFLINE
+                        val opponentNick = snapshot.opponentName
+                        if (appLanguage == AppLanguage.RU) "ХОД: ${if (isMultiplayer) opponentNick.uppercase() else "БОТ"}"
+                        else if (appLanguage == AppLanguage.UA) "ХІД: ${if (isMultiplayer) opponentNick.uppercase() else "БОТ"}"
+                        else if (appLanguage == AppLanguage.IT) "TURNO DI: ${if (isMultiplayer) opponentNick.uppercase() else "BOT"}"
+                        else "TURN: ${if (isMultiplayer) opponentNick.uppercase() else "BOT"}"
                     },
                     color = if (snapshot.isLocalTurn) Color(0xFFD1E4FF) else Color(0xFF909094),
                     fontSize = 12.sp,

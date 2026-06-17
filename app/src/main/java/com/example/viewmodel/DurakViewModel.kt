@@ -37,6 +37,7 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
 
     // Current screen
     enum class Screen {
+        SPLASH,
         MAIN_MENU,
         OFFLINE_SETUP,
         MULTIPLAYER_HUB,
@@ -78,8 +79,11 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
         _customDeckIds.value = current
     }
 
-    private val _currentScreen = MutableStateFlow(Screen.MAIN_MENU)
+    private val _currentScreen = MutableStateFlow(Screen.SPLASH)
     val currentScreen = _currentScreen.asStateFlow()
+
+    private val _splashProgress = MutableStateFlow(0f)
+    val splashProgress = _splashProgress.asStateFlow()
 
     private val prefs = application.getSharedPreferences("durak_prefs", android.content.Context.MODE_PRIVATE)
 
@@ -185,6 +189,16 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
         com.example.audio.DurakAudioManager.musicVolume = _musicVolume.value
         com.example.audio.DurakAudioManager.sfxVolume = _sfxVolume.value
 
+        // Splash screen smooth progress simulation (2.5 seconds total loading phase)
+        viewModelScope.launch {
+            val totalSteps = 100
+            for (i in 0..totalSteps) {
+                delay(25)
+                _splashProgress.value = i / 100f
+            }
+            _currentScreen.value = Screen.MAIN_MENU
+        }
+
         // Setup background music dynamic track state engine observer
         viewModelScope.launch {
             kotlinx.coroutines.flow.combine(_currentScreen, _gameState) { screen, state ->
@@ -266,7 +280,7 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
         "STATUS_TITLE_LABEL" to "Sound Update",
         "CHANGELOG_BTN" to "Changelog",
         "CHANGELOG_TITLE" to "Version Changelog",
-        "CHANGELOG_TEXT" to "Version 0.2.2 (Grand Milestone Update)\n\n• Late Game Theme: Enhanced table aesthetics and adapted musical accompaniment when no cards remain in the deck.\n\n• Roadmap Updated: May and 0.2 milestones removed. June milestone redesigned to showcase the upcoming 0.3 Multiplayer Update with WiFi support up to 6 players, quick chat, and lobby improvements.\n\n• Battle Logs: Active match logs removed from the gameplay arena; they are now safely accessible via the Match Archives.\n\n• Multiplayer Improvements: Fixed the matchmaking bug that omitted opponent nicknames in archives and resolved host name visibility issues.",
+        "CHANGELOG_TEXT" to "Version 0.2.3 (Splash Screen & Throw-in Update)\n\n• Loading Splash Screen: Introduced a beautifully animated loading screen on app startup; game audio is completely muted until loading finishes.\n\n• Throw-in Card Tossing: Added the ability to toss matching cards to a defender who chooses to take cards, followed by a Pass action.\n\n• Brand New Audio: Integrated a special realistic card-pickup sound effect (cards_take.mp3) whenever cards are gathered from the table.",
         "BOT_DECENT_TITLE" to "DECENT AMATEUR BOT",
         "BOT_DECENT_DESC" to "Plays casual valid combinations. Excellent for beginners looking to learn basic durak card sequencing.",
         "BOT_AI_TITLE" to "AI ANALYTICAL BOT",
@@ -316,11 +330,11 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
         "WIN_TITLE" to "ПОБЕДА!",
         "LOST_TITLE" to "ПОРАЖЕНИЕ! ВЫ ДУРАК!",
         "DRAW_TITLE" to "НИЧЬЯ!",
-        "DISC_TITLE" to "Игрок отключился!",
+        "DISC_TITLE" to "Оппонент отключился!",
         "STATUS_TITLE_LABEL" to "Музыкальное обновление",
-        "CHANGELOG_BTN" to "Изменения",
-        "CHANGELOG_TITLE" to "История изменений",
-        "CHANGELOG_TEXT" to "Версия 0.2.2 (Глобальное обновление)\n\n• Тема поздней игры: Улучшено визуальное оформление стола и изменено музыкальное сопровождение при розыгрыше финальной стадии, когда колода опустела.\n\n• Дорожная карта: Удалены прошедшие этапы Май и 0.2. Июньский этап переработан под будущее обновление «0.3 - Многопользовательское обновление» с поддержкой Wi-Fi до 6 игроков, быстрым чатом и улучшениями лобби.\n\n• Логи боя: Кнопка логов убрана из игровых экранов; вся история ходов теперь доступна только через Архивы матчей.\n\n• Оптимизация сети: Исправлен баг, из-за которого никнеймы оппонентов не сохранялись в архивах, а также исправлено отображение имени хоста у клиентов.",
+        "CHANGELOG_BTN" to "Список изменений",
+        "CHANGELOG_TITLE" to "Список изменений",
+        "CHANGELOG_TEXT" to "Версия 0.2.3 (Загрузочный экран и Подкидывание)\n\n• Загрузочный экран: Добавлен плавный анимированный экран загрузки при запуске игры; все звуки заглушены во время загрузки.\n\n• Подкидывание карт: Добавлена полноценная возможность «докидывать» карты защищающемуся игроку, который решил взять карты со стола, с последующим нажатием кнопки «Пас».\n\n• Новые звуковые эффекты: Добавлен реалистичный звук забирания карт (cards_take.mp3), который воспроизводится при их переносе в руку.",
         "BOT_DECENT_TITLE" to "ЛЮБИТЕЛЬСКИЙ БОТ",
         "BOT_DECENT_DESC" to "Разыгрывает простые допустимые комбинации. Отлично подходит для начинающих, желающих освоить базовый порядок карт в дураке.",
         "BOT_AI_TITLE" to "АНАЛИТИЧЕСКИЙ ИИ-БОТ",
@@ -345,7 +359,7 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
         "NSD_STATUS" to "Rilevamento Wi-Fi Hub",
         "HOST_LOBBY" to "Crea una Stanza",
         "MY_IP" to "Tuo IP Host:",
-        "DISCOVERY_ACTIVE" to "Ricerca host locali in corso...",
+        "DISCOVERY_ACTIVE" to "Ricerca host locais in corso...",
         "TAP_TO_CONNECT" to "Tocca per connetterti",
         "MANUAL_CONNECT" to "Connessione IP Diretta",
         "ENTER_HOST_IP" to "Inserisci l'indirizzo IP dell'host",
@@ -374,7 +388,7 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
         "STATUS_TITLE_LABEL" to "Aggiornamento audio",
         "CHANGELOG_BTN" to "Registro",
         "CHANGELOG_TITLE" to "Registro Modifiche",
-        "CHANGELOG_TEXT" to "Versione 0.2.2 (Grande aggiornamento della Roadmap)\n\n• Tema fine partita: Estetica del tavolo e accompagnamento musicale modificati per la fase finale, quando il mazzo si esaurisce.\n\n• Roadmap aggiornata: Rimossi gli scaglioni di Maggio e 0.2. Riprogettato il traguardo di Giugno per introdurre il prossimo grande «0.3 - Aggiornamento multigiocatore» con supporto Wi-Fi fino a 6 partecipanti, chat rapida e miglioramenti alle lobby.\n\n• Registro della partita: Rimosso il pulsante dei log durante il gioco; ora il registro è visualizzabile solo all'interno degli Archivi delle partite.\n\n• Ottimizzazione di rete: Risolto il problema della mancata registrazione dei nickname degli avversari negli archivi storici e del placeholder per l'host sui client connessi.",
+        "CHANGELOG_TEXT" to "Versione 0.2.3 (Schermata di caricamento e Lancio supplementare)\n\n• Schermata di avvio animata: Aggiunta una splendida schermata di caricamento all'avvio dell'app; tutti gli effetti sonori e le musiche sono disattivati durante il caricamento.\n\n• Lancio supplementare delle carte: Aggiunta la possibilità di lanciare carte compatibili a un difensore che decide di ritirare le carte dal tavolo, seguita dal pulsante Passa.\n\n• Nuovi effetti sonori: Integrato un suono realistico di raccolta delle carte (cards_take.mp3) ogni volta che vengono raccolte dal tavolo.",
         "BOT_DECENT_TITLE" to "BOT AMATORIALE",
         "BOT_DECENT_DESC" to "Gioca combinazioni semplici e valide. Ottimo per i principianti che vogliono imparare la sequenza base delle carte del durak.",
         "BOT_AI_TITLE" to "BOT ANALITICO IA",
@@ -393,18 +407,18 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
         "BOT_SETUP_TITLE" to "Офлайн Налаштування",
         "DIFFICULTY" to "Складність Бота",
         "EASY" to "Легкий (Випадковий)",
-        "HARD" to "Складний (Аналітик)",
+        "HARD" to "Важкий (Аналітичний)",
         "START_GAME" to "Почати Гру",
-        "P2P_TITLE" to "Локальна мережа",
-        "NSD_STATUS" to "Пошук Wi-Fi",
-        "HOST_LOBBY" to "Створити Лоббі",
-        "MY_IP" to "Ваша IP адреса:",
-        "DISCOVERY_ACTIVE" to "Пошук хостів...",
+        "P2P_TITLE" to "Локальний Онлайн",
+        "NSD_STATUS" to "Пошук Локальних Хостів",
+        "HOST_LOBBY" to "Створити Кімнату",
+        "MY_IP" to "Ваш IP Хоста:",
+        "DISCOVERY_ACTIVE" to "Пошук локальних хостів...",
         "TAP_TO_CONNECT" to "Натисніть для підключення",
-        "MANUAL_CONNECT" to "Підключення по IP",
-        "ENTER_HOST_IP" to "Введіть IP адресу хоста",
-        "CONNECT_BTN" to "Увійти",
-        "WAITING_LOBBY" to "Лоббі відкрито. Очікування гравця...",
+        "MANUAL_CONNECT" to "Пряме IP-Підключення",
+        "ENTER_HOST_IP" to "Введіть IP-адресу хоста",
+        "CONNECT_BTN" to "Підключитися",
+        "WAITING_LOBBY" to "Кімнату відкрито. Очікування гравця...",
         "DISCONNECTED" to "Відключено",
         "CONNECTING" to "Підключення...",
         "BACK" to "Назад",
@@ -428,7 +442,7 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
         "STATUS_TITLE_LABEL" to "Музичне оновлення",
         "CHANGELOG_BTN" to "Список змін",
         "CHANGELOG_TITLE" to "Список змін",
-        "CHANGELOG_TEXT" to "Версія 0.2.2 (Глобальне оновлення)\n\n• Тема пізньої гри: Покращено візуальне оновлення ігрового столу та змінено музичний супровід на фінальній стадії, коли колода закінчилася.\n\n• Дорожня карта: Вилучено пройдешні етапи Травень та 0.2. Червневий етап перероблено під майбутнє оновлення «0.3 - Багатокористувацьке оновлення» з підтримкою Wi-Fi до 6 гравців, швидким чатом та покращеннями лобі.\n\n• Логи битви: Кнопку логів битви прибрано з ігрового екрану; вся історія ходів тепер доступна виключно в Архіві матчів.\n\n• Мережеві виправлення: Виправлено баг, через який нікнейми опонентів не записувалися в архів матчів, а також покращено відображення імені хоста у підключених клієнтів.",
+        "CHANGELOG_TEXT" to "Версія 0.2.3 (Завантажувальний екран та Підкидання)\n\n• Завантажувальний екран: Додано плавний анімований екран завантаження при запуску гри; уся музика та звуки вимкнені під час завантаження.\n\n• Підкидання карт: Реалізовано повну можливість «докидати» карти гравцю, що захищається і вирішив взяти карти зі столу, з наступним натисканням кнопки «Пас».\n\n• Нові звукові ефекти: Додано реалістичний звук забирання карт (cards_take.mp3), який відтворюється під час їх переміщення у руку.",
         "SETTINGS" to "Налаштування",
         "SOUND_TAB" to "Звук",
         "LANG_TAB" to "Мова",
@@ -699,13 +713,20 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
 
     // Handles user pressing Bito / Done
     fun pressBito() {
+        val wasTaking = engine.isDefenderTaking
         if (_activeMode.value == GameMode.OFFLINE) {
             if (engine.performBito("player")) {
+                if (wasTaking) {
+                    com.example.audio.DurakAudioManager.playSFX(7)
+                }
                 refreshLocalState()
                 triggerBotRoutineIfNeeded()
             }
         } else if (_activeMode.value == GameMode.ONLINE_HOST) {
             if (engine.performBito("player")) {
+                if (wasTaking) {
+                    com.example.audio.DurakAudioManager.playSFX(7)
+                }
                 pushHostStateToClient()
             }
         } else {
@@ -717,11 +738,13 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
     fun pressTakeAll() {
         if (_activeMode.value == GameMode.OFFLINE) {
             if (engine.performTakeAll("player")) {
+                com.example.audio.DurakAudioManager.playSFX(7)
                 refreshLocalState()
                 triggerBotRoutineIfNeeded()
             }
         } else if (_activeMode.value == GameMode.ONLINE_HOST) {
             if (engine.performTakeAll("player")) {
+                com.example.audio.DurakAudioManager.playSFX(7)
                 pushHostStateToClient()
             }
         } else {
@@ -749,12 +772,16 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
         // Switch attacker perspective flag correctly for client
         val clientSnapshot = hostSnapshot.copy(
             matchStatus = clientStatus,
-            isLocalTurn = (engine.attackerId == "opponent"), // Client is 'opponent' inside Host Engine
+            isLocalTurn = if (engine.attackerId == "opponent") {
+                engine.tablePairs.all { it.defenseCard != null } || engine.tablePairs.isEmpty() || engine.isDefenderTaking
+            } else {
+                engine.tablePairs.any { it.defenseCard == null } && !engine.isDefenderTaking
+            },
             localHand = clientHand,
             opponentHandSize = hostHand.size,
             opponentName = _playerNickname.value,
-            canBito = (engine.attackerId == "opponent") && engine.tablePairs.isNotEmpty() && engine.tablePairs.all { it.defenseCard != null },
-            canTake = (engine.attackerId == "player") && engine.tablePairs.isNotEmpty() && engine.tablePairs.any { it.defenseCard == null }
+            canBito = (engine.attackerId == "opponent") && engine.tablePairs.isNotEmpty() && (engine.tablePairs.all { it.defenseCard != null } || engine.isDefenderTaking),
+            canTake = (engine.attackerId == "player") && engine.tablePairs.isNotEmpty() && engine.tablePairs.any { it.defenseCard == null } && !engine.isDefenderTaking
         )
 
         val serializedMsg = NetworkProtocol.serializeState(clientSnapshot, hostHand, clientHand, _playerNickname.value)
@@ -798,19 +825,25 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
         val snapshot = engine.createSnapshot()
         if (snapshot.matchStatus != MatchStatus.PLAYING) return
 
-        val isBotActiveTurn = (engine.attackerId == "opponent" && (engine.tablePairs.isEmpty() || engine.tablePairs.all { it.defenseCard != null })) ||
-                              (engine.attackerId == "player" && engine.tablePairs.any { it.defenseCard == null })
+        val isBotActiveTurn = (engine.attackerId == "opponent" && (engine.tablePairs.isEmpty() || engine.tablePairs.all { it.defenseCard != null } || engine.isDefenderTaking)) ||
+                              (engine.attackerId == "player" && engine.tablePairs.any { it.defenseCard == null } && !engine.isDefenderTaking)
         if (isBotActiveTurn && !_botThinking.value) {
             _botThinking.value = true
             viewModelScope.launch {
                 delay(1200) // Thinking aesthetic lapse
                 val prevAttacker = engine.attackerId
                 val isTransferPossible = engine.isTransferMode && engine.tablePairs.isNotEmpty() && engine.tablePairs.all { it.defenseCard == null }
+                val wasTakingBefore = engine.isDefenderTaking
                 val BotSuccess = engine.makeBotMove(_isBotHard.value)
                 _botThinking.value = false
+                val isTakingNow = engine.isDefenderTaking
                 refreshLocalState()
                 if (BotSuccess) {
-                    if (isTransferPossible && engine.attackerId != prevAttacker) {
+                    if (isTakingNow && !wasTakingBefore) {
+                        com.example.audio.DurakAudioManager.playSFX(7) // Bot declared take
+                    } else if (!isTakingNow && wasTakingBefore) {
+                        com.example.audio.DurakAudioManager.playSFX(7) // Bot completed take
+                    } else if (isTransferPossible && engine.attackerId != prevAttacker) {
                         com.example.audio.DurakAudioManager.playSFX(4) // Bot transferred cards
                     } else if (engine.tablePairs.isEmpty() && prevAttacker != engine.attackerId) {
                         // Bito happened, no card was thrown by bot on table in this sub-step
@@ -889,11 +922,16 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
                 }
                 msg == "ACTION_TAKE" -> {
                     if (engine.performTakeAll("opponent")) {
+                        com.example.audio.DurakAudioManager.playSFX(7)
                         stateChanged = true
                     }
                 }
                 msg == "ACTION_BITO" -> {
+                    val wasTaking = engine.isDefenderTaking
                     if (engine.performBito("opponent")) {
+                        if (wasTaking) {
+                            com.example.audio.DurakAudioManager.playSFX(7)
+                        }
                         stateChanged = true
                     }
                 }
@@ -915,7 +953,11 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
                     deckSize = statePayload.deckSize,
                     tablePairs = statePayload.tablePairs,
                     discardPileSize = statePayload.discardPileSize,
-                    isLocalTurn = if (isClientAttacking) statePayload.tablePairs.all { it.defenseCard != null } || statePayload.tablePairs.isEmpty() else statePayload.tablePairs.any { it.defenseCard == null },
+                    isLocalTurn = if (isClientAttacking) {
+                        statePayload.tablePairs.all { it.defenseCard != null } || statePayload.tablePairs.isEmpty() || statePayload.isDefenderTaking
+                    } else {
+                        statePayload.tablePairs.any { it.defenseCard == null } && !statePayload.isDefenderTaking
+                    },
                     localHand = statePayload.clientHand,
                     opponentHandSize = statePayload.hostHand.size,
                     opponentName = statePayload.hostNick,
@@ -924,9 +966,10 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
                     gameLog = statePayload.gameLog,
                     gameLogEn = statePayload.gameLogEn,
                     gameLogRu = statePayload.gameLogRu,
-                    canTake = !isClientAttacking && statePayload.tablePairs.isNotEmpty() && statePayload.tablePairs.any { it.defenseCard == null },
-                    canBito = isClientAttacking && statePayload.tablePairs.isNotEmpty() && statePayload.tablePairs.all { it.defenseCard != null },
-                    isTransferMode = statePayload.isTransferMode
+                    canTake = !isClientAttacking && statePayload.tablePairs.isNotEmpty() && statePayload.tablePairs.any { it.defenseCard == null } && !statePayload.isDefenderTaking,
+                    canBito = isClientAttacking && statePayload.tablePairs.isNotEmpty() && (statePayload.tablePairs.all { it.defenseCard != null } || statePayload.isDefenderTaking),
+                    isTransferMode = statePayload.isTransferMode,
+                    isDefenderTaking = statePayload.isDefenderTaking
                 )
                 
                 _gameState.value = currentSnapshot
@@ -940,7 +983,11 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
                     val oldDefCount = oldSnapshot.tablePairs.count { it.defenseCard != null }
                     val newDefCount = currentSnapshot.tablePairs.count { it.defenseCard != null }
                     
-                    if (newSize > oldSize) {
+                    if (currentSnapshot.isDefenderTaking && !oldSnapshot.isDefenderTaking) {
+                        com.example.audio.DurakAudioManager.playSFX(7)
+                    } else if (!currentSnapshot.isDefenderTaking && oldSnapshot.isDefenderTaking) {
+                        com.example.audio.DurakAudioManager.playSFX(7)
+                    } else if (newSize > oldSize) {
                         val attackerChanged = oldSnapshot.attackerPlayerId != currentSnapshot.attackerPlayerId
                         if (currentSnapshot.isTransferMode && attackerChanged && oldSize > 0) {
                             com.example.audio.DurakAudioManager.playSFX(4) // Opponent transferred cards

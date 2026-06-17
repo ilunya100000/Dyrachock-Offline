@@ -81,5 +81,6 @@ data class GameStateSnapshot(
     val gameLogRu: List<String> = emptyList(),
     val canTake: Boolean = false,      // Can the defender take cards from table?
     val canBito: Boolean = false,       // Can the attacker finish attack? (Bito / Pass)
-    val isTransferMode: Boolean = false
+    val isTransferMode: Boolean = false,
+    val isDefenderTaking: Boolean = false
 )

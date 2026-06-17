@@ -25,6 +25,7 @@ class DurakEngine {
     var matchStatus: MatchStatus = MatchStatus.NOT_STARTED
     var isTransferMode: Boolean = false
     var isDefenderTaking: Boolean = false
+    var defenderStartHandSize: Int = 0
     val gameLogEn: MutableList<String> = mutableListOf()
     val gameLogRu: MutableList<String> = mutableListOf()
 
@@ -45,6 +46,7 @@ class DurakEngine {
     fun startMatch(player1Name: String, player2Name: String, isBotGame: Boolean, deckSize: Int = 36, isTransferMode: Boolean = false, customDeckIds: Set<String>? = null) {
         this.isTransferMode = isTransferMode
         this.isDefenderTaking = false
+        this.defenderStartHandSize = 0
         deck.clear()
         tablePairs.clear()
         playerHand.clear()
@@ -151,11 +153,14 @@ class DurakEngine {
         if (!hand.contains(card)) return false
 
         val defenderHand = if (playerId == "player") opponentHand else playerHand
-        val maxCardsAllowed = minOf(6, defenderHand.size + tablePairs.filter { it.defenseCard == null }.size)
 
-        // Can't throw more cards than defender can defend
+        if (tablePairs.isEmpty()) {
+            defenderStartHandSize = defenderHand.size
+        }
+
+        // Can't throw more cards than defender had at the start of the round (max target's hand size, and max 6)
         val undefendedAndNewCount = tablePairs.size + 1
-        if (undefendedAndNewCount > 6 || undefendedAndNewCount > defenderHand.size + tablePairs.size) {
+        if (undefendedAndNewCount > 6 || undefendedAndNewCount > defenderStartHandSize) {
             return false
         }
 
@@ -305,6 +310,9 @@ class DurakEngine {
         hand.remove(card)
         tablePairs.add(CardPair(attackCard = card))
 
+        // Update the defender starting hand count lock for the new defender
+        defenderStartHandSize = recipientHand.size
+
         log("${if (playerId == "player") "You" else "Opponent"} transferred with ${card.rank.symbol}${card.suit.symbol}!",
             "${if (playerId == "player") "Вы" else "Оппонент"} перевели картой ${card.rank.symbol}${card.suit.symbol}!")
 
@@ -340,7 +348,7 @@ class DurakEngine {
                         tablePairs.any { it.attackCard.rank == card.rank || it.defenseCard?.rank == card.rank }
                     }
 
-                    if (validTossCards.isNotEmpty() && tablePairs.size < 6 && playerHand.size > 0) {
+                    if (validTossCards.isNotEmpty() && tablePairs.size < 6 && tablePairs.size < defenderStartHandSize && playerHand.size > 0) {
                         // Toss cards based on difficulty
                         val cardToss = if (isHard) {
                             // Toss lowest rank first (and avoid passing trumps if rank matched trump unless necessary)

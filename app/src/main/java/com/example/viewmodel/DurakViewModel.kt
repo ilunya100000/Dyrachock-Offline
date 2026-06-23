@@ -183,11 +183,42 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
         _mpLobbyPlayersCount.value = count
     }
 
+    private val _showExitConfirmDialog = MutableStateFlow(false)
+    val showExitConfirmDialog = _showExitConfirmDialog.asStateFlow()
+
+    private val _showClearArchiveConfirmDialog = MutableStateFlow(false)
+    val showClearArchiveConfirmDialog = _showClearArchiveConfirmDialog.asStateFlow()
+
+    private val _showMigrationRecommendDialog = MutableStateFlow(false)
+    val showMigrationRecommendDialog = _showMigrationRecommendDialog.asStateFlow()
+
+    fun setExitConfirmDialogVisible(visible: Boolean) {
+        _showExitConfirmDialog.value = visible
+    }
+
+    fun setClearArchiveConfirmDialogVisible(visible: Boolean) {
+        _showClearArchiveConfirmDialog.value = visible
+    }
+
+    fun setMigrationRecommendDialogVisible(visible: Boolean) {
+        _showMigrationRecommendDialog.value = visible
+    }
+
     init {
         // Initialize AudioManager with application context and volumes
         com.example.audio.DurakAudioManager.initialize(application)
         com.example.audio.DurakAudioManager.musicVolume = _musicVolume.value
         com.example.audio.DurakAudioManager.sfxVolume = _sfxVolume.value
+
+        // Check for first login and recommendation to clear match history
+        viewModelScope.launch {
+            gameHistory.collect { history ->
+                if (history.isNotEmpty() && !prefs.getBoolean("has_shown_system_changed_recommendation", false)) {
+                    _showMigrationRecommendDialog.value = true
+                    prefs.edit().putBoolean("has_shown_system_changed_recommendation", true).apply()
+                }
+            }
+        }
 
         // Splash screen smooth progress simulation (2.5 seconds total loading phase)
         viewModelScope.launch {
@@ -206,6 +237,8 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
             }.collect { (screen, state) ->
                 if (screen == Screen.GAME_TABLE && state.matchStatus == MatchStatus.PLAYING && state.deckSize == 0) {
                     com.example.audio.DurakAudioManager.startMusic(6)
+                } else if (screen == Screen.CUSTOM_DECK) {
+                    com.example.audio.DurakAudioManager.startMusic(8)
                 } else if (screen == Screen.MAIN_MENU || screen == Screen.OFFLINE_SETUP || screen == Screen.MULTIPLAYER_HUB || screen == Screen.STATS_BOARD || screen == Screen.GAME_TABLE) {
                     com.example.audio.DurakAudioManager.startMusic(5)
                 } else {
@@ -277,10 +310,21 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
         "LOST_TITLE" to "DEFEAT! YOU ARE THE DURAK!",
         "DRAW_TITLE" to "DRAW GAME!",
         "DISC_TITLE" to "Opponent disconnected!",
-        "STATUS_TITLE_LABEL" to "The Final version of Sound Update",
+        "EXIT_CONFIRM_TITLE" to "Exit match?",
+        "EXIT_CONFIRM_DESC" to "Leaving the game now is equivalent to a loss. Are you sure you want to exit?",
+        "EXIT_CONFIRM_YES" to "Exit",
+        "EXIT_CONFIRM_NO" to "Stay",
+        "CLEAR_CONFIRM_TITLE" to "Clear archive?",
+        "CLEAR_CONFIRM_DESC" to "Are you sure you want to clear your match archive?",
+        "CLEAR_CONFIRM_YES" to "Clear",
+        "CLEAR_CONFIRM_NO" to "Cancel",
+        "MIGRATION_RECOMMEND_TITLE" to "Recommendation",
+        "MIGRATION_RECOMMEND_DESC" to "We recommend clearing the match archive, as the in-game system has changed.",
+        "MIGRATION_RECOMMEND_OK" to "OK",
+        "STATUS_TITLE_LABEL" to "Multiplayer Update",
         "CHANGELOG_BTN" to "Changelog",
         "CHANGELOG_TITLE" to "Version Changelog",
-        "CHANGELOG_TEXT" to "Version 0.2.3_01 (Security & Rules Fix)\n\n• Hand Card Limit: Fixed a critical bug in throwing-in / card tossing. The defending player can no longer receive or be forced to cover more cards than they physically held in their hands before the attack round started. Tossing extra cards is now strictly restricted based on the defender's actual hand size.",
+        "CHANGELOG_TEXT" to "Version 0.3-pre1 (Multiplayer Pre-release)\n\n• Exit Confirmation: Added a confirmation dialog when exiting an active game (offline or multiplayer). Leaving now properly counts as a defeat!\n\n• Clear History Warning: Added a confirmation prompt before clearing the match archives to prevent accidental deletion.\n\n• Custom Deck Music: Added a special ambient music track (\"the_gratest_ingeener\") that plays while customizing your card deck.\n\n• Version Transition: Initiated transition preparations for the upcoming multiplayer update.",
         "BOT_DECENT_TITLE" to "DECENT AMATEUR BOT",
         "BOT_DECENT_DESC" to "Plays casual valid combinations. Excellent for beginners looking to learn basic durak card sequencing.",
         "BOT_AI_TITLE" to "AI ANALYTICAL BOT",
@@ -331,10 +375,21 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
         "LOST_TITLE" to "ПОРАЖЕНИЕ! ВЫ ДУРАК!",
         "DRAW_TITLE" to "НИЧЬЯ!",
         "DISC_TITLE" to "Оппонент отключился!",
-        "STATUS_TITLE_LABEL" to "Финальная версия музыкального обновления",
+        "EXIT_CONFIRM_TITLE" to "Выйти из игры?",
+        "EXIT_CONFIRM_DESC" to "Выход из партии равносилен поражению. Вы точно хотите выйти?",
+        "EXIT_CONFIRM_YES" to "Выйти",
+        "EXIT_CONFIRM_NO" to "Остаться",
+        "CLEAR_CONFIRM_TITLE" to "Очистить архив?",
+        "CLEAR_CONFIRM_DESC" to "Вы точно хотите очистить архив битв?",
+        "CLEAR_CONFIRM_YES" to "Очистить",
+        "CLEAR_CONFIRM_NO" to "Отмена",
+        "MIGRATION_RECOMMEND_TITLE" to "Рекомендация",
+        "MIGRATION_RECOMMEND_DESC" to "Рекомендуем очистить архив матчей, поскольку поменялась система в игре.",
+        "MIGRATION_RECOMMEND_OK" to "ОК",
+        "STATUS_TITLE_LABEL" to "Многопользовательское обновление",
         "CHANGELOG_BTN" to "Список изменений",
         "CHANGELOG_TITLE" to "Список изменений",
-        "CHANGELOG_TEXT" to "Версия 0.2.3_01 (Минорный патч безопасности)\n\n• Лимит по картам: Исправлен баг с докидыванием карт. Теперь защищающийся игрок не может принять или отбить больше карт, чем у него физически было в руках перед началом атаки в данном раунде. Запрещено докидывать лишние карты, если у игрока меньше карт в руке, чем на столе.",
+        "CHANGELOG_TEXT" to "Версия 0.3-pre1 (Мультиплеерное пре-превью)\n\n• Подтверждение выхода: Добавлен диалог подтверждения при выходе из активной партии (в офлайне или сети). Выход из игры теперь приравнивается к поражению!\n\n• Предупреждение очистки: Добавлено подтверждение перед полной очисткой архива матчей во избежание случайного удаления.\n\n• Музыка кастомизации: В меню создания собственной колоды теперь играет особый атмосферный саундтрек (\"the_gratest_ingeener\").\n\n• Подготовка к мультиплееру: Заложены сетевые основы и начат переход на версию 0.3.",
         "BOT_DECENT_TITLE" to "ЛЮБИТЕЛЬСКИЙ БОТ",
         "BOT_DECENT_DESC" to "Разыгрывает простые допустимые комбинации. Отлично подходит для начинающих, желающих освоить базовый порядок карт в дураке.",
         "BOT_AI_TITLE" to "АНАЛИТИЧЕСКИЙ ИИ-БОТ",
@@ -385,10 +440,21 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
         "LOST_TITLE" to "SCONFITTA! SEI IL DURAK!",
         "DRAW_TITLE" to "PAREGGIO!",
         "DISC_TITLE" to "Avversario disconnesso!",
-        "STATUS_TITLE_LABEL" to "La versione finale dell'aggiornamento musicale",
+        "EXIT_CONFIRM_TITLE" to "Esci dal match?",
+        "EXIT_CONFIRM_DESC" to "Uscire dal match equivale a una sconfitta. Sei sicuro di voler uscire?",
+        "EXIT_CONFIRM_YES" to "Esci",
+        "EXIT_CONFIRM_NO" to "Rimani",
+        "CLEAR_CONFIRM_TITLE" to "Svuotare l'archivio?",
+        "CLEAR_CONFIRM_DESC" to "Sei sicuro di voler svuotare l'archivio delle partite?",
+        "CLEAR_CONFIRM_YES" to "Svuota",
+        "CLEAR_CONFIRM_NO" to "Annulla",
+        "MIGRATION_RECOMMEND_TITLE" to "Raccomandazione",
+        "MIGRATION_RECOMMEND_DESC" to "Consigliamo di svuotare l'archivio delle partite, poiché il sistema di gioco è cambiato.",
+        "MIGRATION_RECOMMEND_OK" to "OK",
+        "STATUS_TITLE_LABEL" to "Aggiornamento Multigiocatore",
         "CHANGELOG_BTN" to "Registro",
         "CHANGELOG_TITLE" to "Registro Modifiche",
-        "CHANGELOG_TEXT" to "Versione 0.2.3_01 (Risoluzione Bug delle Regole)\n\n• Limite Carte in Mano: Risolto un bug sul lancio delle carte supplementari. Il difensore non può ricevere o dover coprire più carte di quante ne avesse effettivamente in mano prima dell'inizio del round di attacco. È vietato lanciare carte in eccesso rispetto al numero di carte in mano al difensore.",
+        "CHANGELOG_TEXT" to "Versione 0.3-pre1 (Pre-rilascio Multigiocatore)\n\n• Conferma Uscita: Aggiunto un dialogo di conferma prima di uscire da una partita attiva. Abbandonare la partita equivale ora a una sconfitta!\n\n• Avviso Cancellazione: Aggiunta una conferma di sicurezza prima di svuotare la cronologia delle partite per evitare cancellazioni accidentali.\n\n• Musica Deck Personalizzato: Una traccia musicale speciale (\"the_gratest_ingeener\") viene ora riprodotta nella schermata di personalizzazione del mazzo.\n\n• Transizione di Versione: Iniziata la fase di preparazione per il prossimo grande aggiornamento multigiocatore.",
         "BOT_DECENT_TITLE" to "BOT AMATORIALE",
         "BOT_DECENT_DESC" to "Gioca combinazioni semplici e valide. Ottimo per i principianti che vogliono imparare la sequenza base delle carte del durak.",
         "BOT_AI_TITLE" to "BOT ANALITICO IA",
@@ -439,10 +505,21 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
         "LOST_TITLE" to "ПОРАЗКА! ВИ ДУРНИК!",
         "DRAW_TITLE" to "НІЧИЯ!",
         "DISC_TITLE" to "Гравець відключився!",
-        "STATUS_TITLE_LABEL" to "Фінальна версія музичного оновлення",
+        "EXIT_CONFIRM_TITLE" to "Вийти з гри?",
+        "EXIT_CONFIRM_DESC" to "Вихід із партії рівносильний поразці. Ви точно хочете вийти?",
+        "EXIT_CONFIRM_YES" to "Вийти",
+        "EXIT_CONFIRM_NO" to "Залишитися",
+        "CLEAR_CONFIRM_TITLE" to "Очистити архів?",
+        "CLEAR_CONFIRM_DESC" to "Ви точно хочете очистити архів битв?",
+        "CLEAR_CONFIRM_YES" to "Очистити",
+        "CLEAR_CONFIRM_NO" to "Скасувати",
+        "MIGRATION_RECOMMEND_TITLE" to "Рекомендація",
+        "MIGRATION_RECOMMEND_DESC" to "Рекомендуємо очистити архів матчів, оскільки змінилася система у грі.",
+        "MIGRATION_RECOMMEND_OK" to "ОК",
+        "STATUS_TITLE_LABEL" to "Мультиплеєрне оновлення",
         "CHANGELOG_BTN" to "Список змін",
         "CHANGELOG_TITLE" to "Список змін",
-        "CHANGELOG_TEXT" to "Версія 0.2.3_01 (Мінорний патч та Виправлення)\n\n• Ліміт по картах у руці: Виправлено баг із докидуванням карт. Тепер гравець, що захищається, не може прийняти або відбити більше карт, ніж у нього фізически було в руках перед початком атаки у поточному раунді. Заборонено докидувати зайві карти, якщо у гравця менше карт у руці, ніж на столі.",
+        "CHANGELOG_TEXT" to "Версія 0.3-pre1 (Мультиплеєрний пре-реліз)\n\n• Підтвердження виходу: Додано діалог підтвердження при виході з активної гри (офлайн або мережа). Вихід з гри тепер зараховується як поразка!\n\n• Попередження очищення: Додано підтвердження перед повним очищенням архіву матчів для запобігання випадковому видаленню.\n\n• Музика кастомізації: У меню створення власної колоди тепер грає особливий атмосферний саундтрек (\"the_gratest_ingeener\").\n\n• Підготовка до мультиплеєру: Закладено мережеві основи та розпочато перехід на версію 0.3.",
         "SETTINGS" to "Налаштування",
         "SOUND_TAB" to "Звук",
         "LANG_TAB" to "Мова",
@@ -486,6 +563,40 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
             multiplayerManager.stopAll()
         }
         _currentScreen.value = screen
+    }
+
+    fun forfeitMatch() {
+        val currentScreen = _currentScreen.value
+        if (currentScreen != Screen.GAME_TABLE) {
+            navigateTo(Screen.MAIN_MENU)
+            return
+        }
+
+        val snapshot = _gameState.value
+        if (snapshot.matchStatus == MatchStatus.PLAYING) {
+            // Forfeit is equivalent to defeat
+            engine.matchStatus = MatchStatus.LOST
+            engine.log("Player surrendered and left the match.", "Игрок сдался и вышел из партии.")
+            val finalSnapshot = engine.createSnapshot().copy(matchStatus = MatchStatus.LOST)
+            _gameState.value = finalSnapshot
+            
+            // If multiplayer, tell opponent about surrender
+            if (_activeMode.value == GameMode.ONLINE_HOST) {
+                // Opponent wins
+                val clientSnapshot = finalSnapshot.copy(
+                    matchStatus = MatchStatus.WON,
+                    opponentName = _playerNickname.value
+                )
+                val serializedMsg = NetworkProtocol.serializeState(clientSnapshot, engine.playerHand.toList(), engine.opponentHand.toList(), _playerNickname.value)
+                multiplayerManager.sendMessage(serializedMsg)
+                multiplayerManager.sendMessage("OPPONENT_SURRENDERED")
+            } else if (_activeMode.value == GameMode.ONLINE_CLIENT) {
+                multiplayerManager.sendMessage("OPPONENT_SURRENDERED")
+            }
+            
+            checkAndPersistRoomResult(finalSnapshot)
+        }
+        navigateTo(Screen.MAIN_MENU)
     }
 
     // --- GAME CONTROL ACTIONS ---
@@ -859,6 +970,15 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
 
     // Handles Client-to-Host parsed action payloads
     private fun handleNetworkMessage(msg: String) {
+        if (msg == "OPPONENT_SURRENDERED") {
+            engine.matchStatus = MatchStatus.WON
+            engine.log("Opponent surrendered and left the match.", "Оппонент сдался и вышел из партии.")
+            val finalSnapshot = engine.createSnapshot().copy(matchStatus = MatchStatus.WON)
+            _gameState.value = finalSnapshot
+            checkAndPersistRoomResult(finalSnapshot)
+            return
+        }
+
         if (msg.startsWith("NICKNAME:")) {
             val name = msg.replace("NICKNAME:", "").trim()
             if (name.isNotEmpty()) {

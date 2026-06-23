@@ -72,6 +72,10 @@ sealed interface TableFlowItem {
 fun DurakApp(viewModel: DurakViewModel) {
     val currentScreen by viewModel.currentScreen.collectAsStateWithLifecycle()
     val statsList by viewModel.gameHistory.collectAsStateWithLifecycle()
+    
+    val showExitConfirm by viewModel.showExitConfirmDialog.collectAsStateWithLifecycle()
+    val showClearArchiveConfirm by viewModel.showClearArchiveConfirmDialog.collectAsStateWithLifecycle()
+    val showMigrationRecommend by viewModel.showMigrationRecommendDialog.collectAsStateWithLifecycle()
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -95,6 +99,128 @@ fun DurakApp(viewModel: DurakViewModel) {
                 DurakViewModel.Screen.CUSTOM_DECK -> CustomDeckSelectionScreen(viewModel)
             }
         }
+    }
+
+    if (showExitConfirm) {
+        AlertDialog(
+            onDismissRequest = { viewModel.setExitConfirmDialogVisible(false) },
+            title = {
+                Text(
+                    text = viewModel.getString("EXIT_CONFIRM_TITLE"),
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 20.sp
+                )
+            },
+            text = {
+                Text(
+                    text = viewModel.getString("EXIT_CONFIRM_DESC"),
+                    fontSize = 15.sp
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.setExitConfirmDialogVisible(false)
+                        viewModel.forfeitMatch()
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFFBA1A1A),
+                        contentColor = Color.White
+                    ),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text(text = viewModel.getString("EXIT_CONFIRM_YES"))
+                }
+            },
+            dismissButton = {
+                Button(
+                    onClick = { viewModel.setExitConfirmDialogVisible(false) },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                    ),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text(text = viewModel.getString("EXIT_CONFIRM_NO"))
+                }
+            },
+            shape = RoundedCornerShape(24.dp)
+        )
+    }
+
+    if (showClearArchiveConfirm) {
+        AlertDialog(
+            onDismissRequest = { viewModel.setClearArchiveConfirmDialogVisible(false) },
+            title = {
+                Text(
+                    text = viewModel.getString("CLEAR_CONFIRM_TITLE"),
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 20.sp
+                )
+            },
+            text = {
+                Text(
+                    text = viewModel.getString("CLEAR_CONFIRM_DESC"),
+                    fontSize = 15.sp
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.setClearArchiveConfirmDialogVisible(false)
+                        viewModel.clearMatchHistory()
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFFBA1A1A),
+                        contentColor = Color.White
+                    ),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text(text = viewModel.getString("CLEAR_CONFIRM_YES"))
+                }
+            },
+            dismissButton = {
+                Button(
+                    onClick = { viewModel.setClearArchiveConfirmDialogVisible(false) },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                    ),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text(text = viewModel.getString("CLEAR_CONFIRM_NO"))
+                }
+            },
+            shape = RoundedCornerShape(24.dp)
+        )
+    }
+
+    if (showMigrationRecommend) {
+        AlertDialog(
+            onDismissRequest = { viewModel.setMigrationRecommendDialogVisible(false) },
+            title = {
+                Text(
+                    text = viewModel.getString("MIGRATION_RECOMMEND_TITLE"),
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 20.sp
+                )
+            },
+            text = {
+                Text(
+                    text = viewModel.getString("MIGRATION_RECOMMEND_DESC"),
+                    fontSize = 15.sp
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = { viewModel.setMigrationRecommendDialogVisible(false) },
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text(text = viewModel.getString("MIGRATION_RECOMMEND_OK"))
+                }
+            },
+            shape = RoundedCornerShape(24.dp)
+        )
     }
 }
 
@@ -223,7 +349,7 @@ fun SplashScreen(viewModel: DurakViewModel) {
             )
 
             Text(
-                text = "Version 0.2.3_01",
+                text = "Version 0.3-pre1",
                 fontSize = 12.sp,
                 fontStyle = FontStyle.Italic,
                 color = Color(0xFF909094).copy(alpha = 0.8f),
@@ -599,7 +725,7 @@ fun MainMenuScreen(viewModel: DurakViewModel, statsList: List<GameStat>) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "0.2.3_01",
+                    text = "0.3-pre1",
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f)
@@ -2109,7 +2235,13 @@ fun GameTableScreen(viewModel: DurakViewModel) {
 
                         // Small Exit button to menu safely
                         IconButton(
-                            onClick = { viewModel.navigateTo(DurakViewModel.Screen.MAIN_MENU) },
+                            onClick = {
+                                if (snapshot.matchStatus == com.example.model.MatchStatus.PLAYING) {
+                                    viewModel.setExitConfirmDialogVisible(true)
+                                } else {
+                                    viewModel.navigateTo(DurakViewModel.Screen.MAIN_MENU)
+                                }
+                            },
                             modifier = Modifier
                                 .size(36.dp)
                                 .background(Color.White.copy(alpha = 0.08f), CircleShape)
@@ -3232,7 +3364,7 @@ fun StatsBoardScreen(viewModel: DurakViewModel, statsList: List<GameStat>) {
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Button(
-                onClick = { viewModel.clearMatchHistory() },
+                onClick = { viewModel.setClearArchiveConfirmDialogVisible(true) },
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
                 modifier = Modifier.weight(1f),
                 shape = RoundedCornerShape(16.dp)

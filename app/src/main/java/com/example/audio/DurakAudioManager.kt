@@ -83,6 +83,7 @@ object DurakAudioManager {
         val resId = when (type) {
             5 -> com.example.R.raw.bah_shutka
             6 -> com.example.R.raw.lunnaya_sonata
+            8 -> com.example.R.raw.the_gratest_ingeener
             else -> return
         }
 

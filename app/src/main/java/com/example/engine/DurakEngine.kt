@@ -385,26 +385,63 @@ class DurakEngine {
                 val validDefenseCards = opponentHand.filter { it.canBeat(attackCard, trumpSuit) }
 
                 if (validDefenseCards.isNotEmpty()) {
-                    // Choose defense card based on difficulty
-                    val defenseCard = if (isHard) {
-                        // Filter non-trump first to preserve trumps, and sort by rank
+                    var chosenDefenseCard: Card? = null
+                    
+                    if (isHard) {
+                        // EXPERT BOT ANALYZES IF IT'S BETTER TO TAKE!
+                        // The expert bot knows all of player's cards and hand size!
+                        val lowestDefense = validDefenseCards.minByOrNull { it.rank.value }!!
+                        val isLowestDefenseTrump = lowestDefense.suit == trumpSuit
+                        
+                        var wantToTake = false
+                        
+                        // Heuristic 1: If we must defend with a high trump (e.g. Queen, King, Ace) against a non-trump low card,
+                        // and the player has several cards remaining, it's wiser to take the card and keep our trump.
+                        if (isLowestDefenseTrump && lowestDefense.rank.value >= 12 && attackCard.suit != trumpSuit) {
+                            if (opponentHand.size <= 4) {
+                                wantToTake = true
+                            }
+                        }
+                        
+                        // Heuristic 2: If player has significantly more trumps than us, and our only option to defend is a trump,
+                        // taking the cards will build our hand size to defend later.
+                        val playerTrumps = playerHand.count { it.suit == trumpSuit }
+                        val botTrumps = opponentHand.count { it.suit == trumpSuit }
+                        if (playerTrumps > botTrumps + 1 && isLowestDefenseTrump && opponentHand.size < 5) {
+                            wantToTake = true
+                        }
+                        
+                        // Heuristic 3: If there's an Ace or Trump on the table, and we have very few cards,
+                        // taking can be strategically beneficial in the late game to enrich our hand.
+                        val tableValueCount = tablePairs.count { it.attackCard.suit == trumpSuit || it.attackCard.rank == Rank.ACE }
+                        if (tableValueCount >= 1 && opponentHand.size <= 3 && deck.isEmpty()) {
+                            wantToTake = true
+                        }
+
+                        if (wantToTake) {
+                            return performTakeAll("opponent")
+                        }
+
+                        // Otherwise, sort to choose the lowest non-trump first to defend, then lowest trump
                         val nonTrumps = validDefenseCards.filter { it.suit != trumpSuit }
                         val trumps = validDefenseCards.filter { it.suit == trumpSuit }
-                        if (nonTrumps.isNotEmpty()) {
+                        chosenDefenseCard = if (nonTrumps.isNotEmpty()) {
                             nonTrumps.minByOrNull { it.rank.value }!!
                         } else {
                             trumps.minByOrNull { it.rank.value }!!
                         }
                     } else {
-                        validDefenseCards.minByOrNull { it.rank.value }!!
+                        chosenDefenseCard = validDefenseCards.minByOrNull { it.rank.value }!!
                     }
-                    return performDefense("opponent", attackCard, defenseCard)
-                } else {
-                    // Cannot defend and must Take
-                    // Before taking, user/attacker gets a chance to throw more.
-                    // But for online or offline bot, if the bot declares cannot defend, let's trigger take.
-                    return performTakeAll("opponent")
+
+                    if (chosenDefenseCard != null) {
+                        return performDefense("opponent", attackCard, chosenDefenseCard)
+                    }
                 }
+                
+                // If we reach here, we cannot beat the card (validDefenseCards is empty)
+                // or we analytically chose to take. WE MUST TAKE!
+                return performTakeAll("opponent")
             }
         }
         return false

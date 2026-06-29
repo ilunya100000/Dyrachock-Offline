@@ -349,7 +349,7 @@ fun SplashScreen(viewModel: DurakViewModel) {
             )
 
             Text(
-                text = "Version 0.3-pre1",
+                text = "Version 0.3-pre2",
                 fontSize = 12.sp,
                 fontStyle = FontStyle.Italic,
                 color = Color(0xFF909094).copy(alpha = 0.8f),
@@ -725,7 +725,7 @@ fun MainMenuScreen(viewModel: DurakViewModel, statsList: List<GameStat>) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "0.3-pre1",
+                    text = "0.3-pre2",
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f)

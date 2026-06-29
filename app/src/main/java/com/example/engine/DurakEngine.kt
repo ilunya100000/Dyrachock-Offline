@@ -374,7 +374,9 @@ class DurakEngine {
                     tablePairs.any { it.attackCard.rank == card.rank }
                 }
                 if (transferCard != null) {
-                    return performTransfer("opponent", transferCard)
+                    if (performTransfer("opponent", transferCard)) {
+                        return true
+                    }
                 }
             }
 

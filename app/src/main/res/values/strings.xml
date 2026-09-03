@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">Dyrachok Offline</string>
+    <string name="app_name_standalone" translatable="false">Dyrachok Offline 0.3</string>
 </resources>

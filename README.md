@@ -32,14 +32,14 @@
 * [x] **v0.2.2 (Grand Milestone Update):** Добавление Late Game Theme, перенос логов в архив, исправление багов матчмейкинга и релиз первого Windows-порта.
 * [x] **v0.2.3 (Финал музыкального обновления):** Финальная полировка аудио-баланса, закрытие мелких шероховатостей, добавление новых звуков при забирании карт, механика добрасывания карт при взятии карт и подготовка базы к глобальному сетевому апдейту.
 
-### 💥 Будущее (Ветка v0.3.x)
-* [ ] **Pre:**
-  * Подготовка базы для Многопользовательского обновления
-  * Добавление мелких звуков в игру, которые не вошли в Музыкальное обновление
-* [ ] **Многопользовательское обновление:**
-  * Поддержка до 6 игроков в одной партии по WiFi.
-  * Полноценная система комнат (Лобби) с подключением по коду.
-  * Внутриигровой быстрый чат и эмодзи для общения во время ходов.
+### 🌍 Текущая версия — v0.3 (Multiplayer Update)
+* [x] **Многопользовательское обновление вышло:**
+  * Полные партии по Wi‑Fi от 2 до 6 игроков.
+  * Создание комнат и подключение по коду комнаты.
+  * Отдельное лобби: выбор режима, готовность игроков и запуск партии хостом.
+  * Быстрый внутриигровой чат и эмодзи-реакции.
+  * Поддержка классического и переводного «Дурака» в сетевой игре.
+* [x] **Предрелизная подготовка:** мелкие звуки и стабилизация сетевой основы.
 
 </details>
 
@@ -72,10 +72,13 @@
 * [x] **v0.2.2 (Grand Milestone Update):** Late Game Theme introduction, battle logs moved to archives, matchmaking bug fixes, and the first official Windows port release.
 * [x] **v0.2.3 (Musical Update Finale):** Final audio balancing, minor polish, and cementing the absolute stability of the 0.2 branch.
 
-### 💥 The Future (v0.3 Branch)
-* [ ] **The Multiplayer Update:**
-  * WiFi support for up to 6 players in a single match.
-  * Fully featured Lobby System with quick room code connections.
+### 🌍 Current Version — v0.3 (Multiplayer Update)
+* [x] **The Multiplayer Update is now available:**
+  * Complete Wi‑Fi matches for 2 to 6 players.
+  * Room creation and quick room-code connections.
+  * A dedicated lobby with game-mode selection, player readiness, and host-controlled match start.
   * In-game quick chat and emoji reactions.
+  * Both Classic and Transfer Durak are supported in multiplayer.
+* [x] **Pre-release groundwork:** additional sound effects and multiplayer stability work.
 
 </details>

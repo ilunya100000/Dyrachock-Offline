@@ -63,6 +63,14 @@ data class CardPair(
     val defenseCard: Card? = null
 )
 
+data class RemotePlayerSnapshot(
+    val id: String,
+    val name: String,
+    val handSize: Int,
+    val isAttacker: Boolean = false,
+    val isDefender: Boolean = false
+)
+
 // The immutable game snapshot for rendering or syncing over socket
 data class GameStateSnapshot(
     val trumpCard: Card? = null,
@@ -82,5 +90,9 @@ data class GameStateSnapshot(
     val canTake: Boolean = false,      // Can the defender take cards from table?
     val canBito: Boolean = false,       // Can the attacker finish attack? (Bito / Pass)
     val isTransferMode: Boolean = false,
-    val isDefenderTaking: Boolean = false
+    val isDefenderTaking: Boolean = false,
+    val localPlayerId: String = "player",
+    val currentPlayerId: String = "",
+    val defenderPlayerId: String = "",
+    val opponents: List<RemotePlayerSnapshot> = emptyList()
 )

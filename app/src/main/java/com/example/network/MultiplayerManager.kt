@@ -7,11 +7,14 @@ import android.util.Log
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.io.PrintWriter
 import java.net.ServerSocket
 import java.net.Socket
+import java.util.concurrent.ConcurrentHashMap
 
 class MultiplayerManager(private val context: Context) {
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
@@ -20,6 +23,13 @@ class MultiplayerManager(private val context: Context) {
     private var clientSocket: Socket? = null
     private var writer: PrintWriter? = null
     private var reader: BufferedReader? = null
+    private val hostPeers = ConcurrentHashMap<String, PrintWriter>()
+    private val hostPeerSockets = ConcurrentHashMap<String, Socket>()
+    private var hostedLobby: MultiplayerLobby? = null
+    private val _lobby = MutableStateFlow<MultiplayerLobby.Snapshot?>(null)
+    val lobby = _lobby.asStateFlow()
+    private val _localPlayerId = MutableStateFlow<String?>(null)
+    val localPlayerId = _localPlayerId.asStateFlow()
 
     // Connection states
     enum class State {
@@ -33,8 +43,10 @@ class MultiplayerManager(private val context: Context) {
     private val _connectionState = MutableStateFlow(State.IDLE)
     val connectionState = _connectionState.asStateFlow()
 
-    private val _incomingMessages = MutableStateFlow<String?>(null)
-    val incomingMessages = _incomingMessages.asStateFlow()
+    data class IncomingMessage(val senderId: String?, val payload: String)
+
+    private val _incomingMessages = MutableSharedFlow<IncomingMessage>(extraBufferCapacity = 64)
+    val incomingMessages = _incomingMessages.asSharedFlow()
 
     private val _discoveredHosts = MutableStateFlow<List<NsdServiceInfo>>(emptyList())
     val discoveredHosts = _discoveredHosts.asStateFlow()
@@ -69,13 +81,13 @@ class MultiplayerManager(private val context: Context) {
         }
     }
 
-    fun clearReceivedMessage() {
-        _incomingMessages.value = null
-    }
-
     // Host: Start listening as Server Socket
-    fun startHost(port: Int = 8888) {
+    fun startHost(port: Int = 8888, capacity: Int = MultiplayerLobby.MAX_PLAYERS, hostNickname: String = "Host") {
         stopAll()
+        val room = MultiplayerLobby(capacity = capacity.coerceIn(MultiplayerLobby.MIN_PLAYERS, MultiplayerLobby.MAX_PLAYERS))
+        room.addPlayer("host", hostNickname.ifBlank { "Host" }, isHost = true)
+        hostedLobby = room
+        publishLobby(room)
         _connectionState.value = State.HOSTING
         scope.launch {
             try {
@@ -84,15 +96,43 @@ class MultiplayerManager(private val context: Context) {
                 serverSocket = sSocket
                 Log.d("DurakMultiplayer", "Server started on port $port")
 
-                val socket = sSocket.accept() // Blocks until client connects
-                clientSocket = socket
-                setupSocketStreams(socket)
-                _connectionState.value = State.CONNECTED
-                Log.d("DurakMultiplayer", "Client connected: ${socket.inetAddress.hostAddress}")
+                while (!sSocket.isClosed) {
+                    val socket = sSocket.accept()
+                    val peerAddress = socket.inetAddress.hostAddress ?: socket.inetAddress.hostName
+                    val peerId = "$peerAddress:${socket.port}"
+                    if (room.addPlayer(peerId, "Guest ${room.players.size}")) {
+                        hostPeerSockets[peerId] = socket
+                        hostPeers[peerId] = PrintWriter(socket.getOutputStream(), true)
+                        setupHostPeerReader(peerId, socket)
+                        broadcastLobbyState()
+                        _connectionState.value = State.CONNECTED
+                    } else socket.close()
+                }
             } catch (e: Exception) {
                 if (connectionState.value == State.HOSTING) {
                     _connectionState.value = State.IDLE
                 }
+            }
+        }
+    }
+
+    private fun setupHostPeerReader(peerId: String, socket: Socket) {
+        scope.launch {
+            try {
+                BufferedReader(InputStreamReader(socket.getInputStream())).use { input ->
+                    while (true) {
+                        val line = input.readLine() ?: break
+                        if (!handleHostLobbyMessage(peerId, line)) {
+                            _incomingMessages.emit(IncomingMessage(peerId, line))
+                        }
+                    }
+                }
+            } finally {
+                _incomingMessages.emit(IncomingMessage(peerId, "MULTI_DISCONNECT"))
+                hostPeers.remove(peerId)?.close()
+                hostPeerSockets.remove(peerId)?.close()
+                hostedLobby?.removePlayer(peerId)
+                broadcastLobbyState()
             }
         }
     }
@@ -123,12 +163,18 @@ class MultiplayerManager(private val context: Context) {
         // Start reading loop
         scope.launch {
             try {
-                var line: String? = null
-                while (reader != null && reader?.readLine().also { line = it } != null) {
-                    line?.let {
-                        _incomingMessages.value = it
+                while (true) {
+                    val line = reader?.readLine() ?: break
+                    val lobbyState = LobbyWireProtocol.parseState(line)
+                    if (lobbyState != null) {
+                        _lobby.value = lobbyState
+                    } else if (line.startsWith("LOBBY_SELF:")) {
+                        _localPlayerId.value = line.removePrefix("LOBBY_SELF:").ifBlank { null }
+                    } else {
+                        _incomingMessages.emit(IncomingMessage("host", line))
                     }
                 }
+                handleDisconnect()
             } catch (e: Exception) {
                 // Connection broken
                 handleDisconnect()
@@ -139,11 +185,68 @@ class MultiplayerManager(private val context: Context) {
     fun sendMessage(message: String) {
         scope.launch {
             try {
-                writer?.println(message)
+                if (hostPeers.isNotEmpty()) hostPeers.values.forEach { it.println(message) }
+                else writer?.println(message)
             } catch (e: Exception) {
                 handleDisconnect()
             }
         }
+    }
+
+    fun joinLobby(nickname: String) {
+        scope.launch { writer?.println(LobbyWireProtocol.join(nickname)) }
+    }
+
+    fun sendLobbyChat(text: String) {
+        scope.launch {
+            val room = hostedLobby
+            if (room != null) {
+                if (room.postMessage("host", text) != null) broadcastLobbyState()
+            } else {
+                writer?.println(LobbyWireProtocol.chat(text))
+            }
+        }
+    }
+
+    fun sendMessageToPeer(peerId: String, message: String) {
+        scope.launch { hostPeers[peerId]?.println(message) }
+    }
+
+    /** Closes discovery and the listening socket once a 2–6 player match begins.
+     * Existing player sockets remain open for the match state stream. */
+    fun lockLobbyForMatch(): Boolean {
+        val room = hostedLobby ?: return false
+        if (!room.canStart || room.players.size > room.capacity) return false
+        unregisterNsdService()
+        runCatching { serverSocket?.close() }
+        serverSocket = null
+        return true
+    }
+
+    private fun handleHostLobbyMessage(peerId: String, message: String): Boolean {
+        val room = hostedLobby ?: return false
+        LobbyWireProtocol.decodeJoin(message)?.let { nickname ->
+            room.renamePlayer(peerId, nickname)
+            hostPeers[peerId]?.println("LOBBY_SELF:$peerId")
+            broadcastLobbyState()
+            return true
+        }
+        LobbyWireProtocol.decodeChat(message)?.let { text ->
+            if (room.postMessage(peerId, text) != null) broadcastLobbyState()
+            return true
+        }
+        return LobbyWireProtocol.isLobbyMessage(message)
+    }
+
+    private fun publishLobby(room: MultiplayerLobby) {
+        _lobby.value = room.snapshot()
+    }
+
+    private fun broadcastLobbyState() {
+        val room = hostedLobby ?: return
+        publishLobby(room)
+        val encoded = LobbyWireProtocol.state(room.snapshot())
+        hostPeers.values.forEach { peer -> runCatching { peer.println(encoded) } }
     }
 
     private fun handleDisconnect() {
@@ -162,6 +265,13 @@ class MultiplayerManager(private val context: Context) {
         try { reader?.close() } catch (e: Exception) {}
         try { clientSocket?.close() } catch (e: Exception) {}
         try { serverSocket?.close() } catch (e: Exception) {}
+        hostPeers.values.forEach { runCatching { it.close() } }
+        hostPeerSockets.values.forEach { runCatching { it.close() } }
+        hostPeers.clear()
+        hostPeerSockets.clear()
+        hostedLobby = null
+        _lobby.value = null
+        _localPlayerId.value = null
 
         writer = null
         reader = null
@@ -176,7 +286,7 @@ class MultiplayerManager(private val context: Context) {
     private fun registerNsdService(port: Int) {
         if (nsdManager == null) return
         val serviceInfo = NsdServiceInfo().apply {
-            serviceName = "DurakClassicGame"
+            serviceName = "Durak-${hostedLobby?.roomCode ?: "Classic"}"
             serviceType = "_durak._tcp"
             setPort(port)
         }
@@ -240,7 +350,7 @@ class MultiplayerManager(private val context: Context) {
 
             override fun onServiceFound(serviceInfo: NsdServiceInfo) {
                 Log.d("DurakMultiplayer", "NSD Service Found: ${serviceInfo.serviceName}")
-                if (serviceInfo.serviceType.contains("_durak") && serviceInfo.serviceName.contains("DurakClassicGame")) {
+                if (serviceInfo.serviceType.contains("_durak") && serviceInfo.serviceName.startsWith("Durak-")) {
                     nsdManager?.resolveService(serviceInfo, object : NsdManager.ResolveListener {
                         override fun onResolveFailed(serviceInfo: NsdServiceInfo, errorCode: Int) {
                             Log.e("DurakMultiplayer", "NSD Resolve Failed: $errorCode")

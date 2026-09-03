@@ -14,8 +14,9 @@ android {
     applicationId = "com.aistudio.durak.kgworp"
     minSdk = 24
     targetSdk = 36
-    versionCode = 1
-    versionName = "0.3-pre1"
+    versionCode = 3
+    versionName = "0.3"
+    manifestPlaceholders["appLabel"] = "@string/app_name"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
@@ -28,12 +29,6 @@ android {
       keyAlias = "upload"
       keyPassword = System.getenv("KEY_PASSWORD")
     }
-    create("debugConfig") {
-      storeFile = file("${rootDir}/debug.keystore")
-      storePassword = "android"
-      keyAlias = "androiddebugkey"
-      keyPassword = "android"
-    }
   }
 
   buildTypes {
@@ -43,8 +38,14 @@ android {
       proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
       signingConfig = signingConfigs.getByName("release")
     }
-    debug {
-      signingConfig = signingConfigs.getByName("debugConfig")
+  }
+  flavorDimensions += "distribution"
+  productFlavors {
+    create("standalone") {
+      dimension = "distribution"
+      applicationIdSuffix = ".v03"
+      versionNameSuffix = "-standalone"
+      manifestPlaceholders["appLabel"] = "@string/app_name_standalone"
     }
   }
   compileOptions {
@@ -119,14 +120,3 @@ dependencies {
   "ksp"(libs.androidx.room.compiler)
   "ksp"(libs.moshi.kotlin.codegen)
 }
-
-tasks.register<Copy>("copyCardsTakeSound") {
-    from("src/main/res/raw/playing_cards_transfer.mp3")
-    into("src/main/res/raw")
-    rename { "cards_take.mp3" }
-}
-
-tasks.named("preBuild") {
-    dependsOn("copyCardsTakeSound")
-}
-

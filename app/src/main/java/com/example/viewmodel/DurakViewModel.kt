@@ -8,7 +8,9 @@ import com.example.database.AppDatabase
 import com.example.database.GameStat
 import com.example.database.GameStatRepository
 import com.example.engine.DurakEngine
+import com.example.engine.MultiplayerDurakEngine
 import com.example.model.*
+import com.example.network.MultiplayerGameProtocol
 import com.example.network.MultiplayerManager
 import com.example.network.NetworkProtocol
 import kotlinx.coroutines.Dispatchers
@@ -33,7 +35,9 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
     )
 
     private val engine = DurakEngine()
+    private val multiplayerEngine = MultiplayerDurakEngine()
     private val multiplayerManager = MultiplayerManager(application)
+    private var multiplayerGameActive = false
 
     // Current screen
     enum class Screen {
@@ -140,6 +144,7 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
     val networkState = multiplayerManager.connectionState
     val discoveredHosts = multiplayerManager.discoveredHosts
     val localIp = multiplayerManager.localIpAddress
+    val multiplayerLobby = multiplayerManager.lobby
 
     // Active mode (Offline vs Host vs Client)
     private val _activeMode = MutableStateFlow(GameMode.OFFLINE)
@@ -249,11 +254,8 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
 
         // Monitor socket incoming network actions
         viewModelScope.launch {
-            multiplayerManager.incomingMessages.collect { rawMsg ->
-                if (rawMsg != null) {
-                    handleNetworkMessage(rawMsg)
-                    multiplayerManager.clearReceivedMessage()
-                }
+            multiplayerManager.incomingMessages.collect { message ->
+                handleNetworkMessage(message.payload, message.senderId)
             }
         }
 
@@ -324,7 +326,7 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
         "STATUS_TITLE_LABEL" to "Multiplayer Update",
         "CHANGELOG_BTN" to "Changelog",
         "CHANGELOG_TITLE" to "Version Changelog",
-        "CHANGELOG_TEXT" to "Version 0.3-pre2 (Late Game Bot Stability)\n\n• Late Game Fix: Resolved a critical bug where the bot would freeze when attempting to transfer cards under strict hand size constraints. The bot now correctly falls back to defending or taking!\n\n• Code Enhancements: General optimization of game engine state synchronization.",
+        "CHANGELOG_TEXT" to "Version 0.3 (Multiplayer Update)\n\n• Complete local Wi-Fi matches for 2–6 players with private hands and host-side move validation.\n\n• Classic and Transfer Durak modes, room discovery, lobby chat and quick in-game messages.\n\n• Fixed late-game bot freezes and improved game-state synchronization.",
         "BOT_DECENT_TITLE" to "DECENT AMATEUR BOT",
         "BOT_DECENT_DESC" to "Plays casual valid combinations. Excellent for beginners looking to learn basic durak card sequencing.",
         "BOT_AI_TITLE" to "AI ANALYTICAL BOT",
@@ -389,7 +391,7 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
         "STATUS_TITLE_LABEL" to "Многопользовательское обновление",
         "CHANGELOG_BTN" to "Список изменений",
         "CHANGELOG_TITLE" to "Список изменений",
-        "CHANGELOG_TEXT" to "Версия 0.3-pre2 (Стабильность бота в конце игры)\n\n• Исправление зависания: Устранен критический баг, из-за которого бот зависал при попытке перевести карты в конце игры в условиях нехватки карт у соперника. Теперь бот корректно переходит к защите или берет карты!\n\n• Оптимизация: Общие улучшения синхронизации игровых состояний.",
+        "CHANGELOG_TEXT" to "Версия 0.3 (Многопользовательское обновление)\n\n• Полноценные локальные партии по Wi-Fi для 2–6 игроков: закрытые руки и проверка каждого хода на устройстве хоста.\n\n• Классический и переводной режимы, поиск комнат, чат лобби и быстрые сообщения во время партии.\n\n• Исправлены зависания бота в конце игры и улучшена синхронизация состояния.",
         "BOT_DECENT_TITLE" to "ЛЮБИТЕЛЬСКИЙ БОТ",
         "BOT_DECENT_DESC" to "Разыгрывает простые допустимые комбинации. Отлично подходит для начинающих, желающих освоить базовый порядок карт в дураке.",
         "BOT_AI_TITLE" to "АНАЛИТИЧЕСКИЙ ИИ-БОТ",
@@ -454,7 +456,7 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
         "STATUS_TITLE_LABEL" to "Aggiornamento Multigiocatore",
         "CHANGELOG_BTN" to "Registro",
         "CHANGELOG_TITLE" to "Registro Modifiche",
-        "CHANGELOG_TEXT" to "Versione 0.3-pre2 (Stabilità del Bot nelle Fasi Finali)\n\n• Risolto Blocco Fasi Finali: Corretto un bug critico per cui il bot si bloccava nel tentativo di trasferire carte con poche carte in mano all'avversario. Ora il bot ripiega correttamente sulla difesa o raccoglie le carte!\n\n• Ottimizzazioni: Miglioramenti generali nella sincronizzazione del motore di gioco.",
+        "CHANGELOG_TEXT" to "Versione 0.3 (Aggiornamento multigiocatore)\n\n• Partite Wi-Fi locali complete per 2–6 giocatori con mani private e convalida delle mosse da parte dell'host.\n\n• Modalità classica e trasferibile, ricerca stanze, chat della lobby e messaggi rapidi durante la partita.\n\n• Corretti i blocchi del bot nel finale e migliorata la sincronizzazione.",
         "BOT_DECENT_TITLE" to "BOT AMATORIALE",
         "BOT_DECENT_DESC" to "Gioca combinazioni semplici e valide. Ottimo per i principianti che vogliono imparare la sequenza base delle carte del durak.",
         "BOT_AI_TITLE" to "BOT ANALITICO IA",
@@ -519,7 +521,7 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
         "STATUS_TITLE_LABEL" to "Мультиплеєрне оновлення",
         "CHANGELOG_BTN" to "Список змін",
         "CHANGELOG_TITLE" to "Список змін",
-        "CHANGELOG_TEXT" to "Версія 0.3-pre2 (Стабільність бота в кінці гри)\n\n• Виправлення зависання: Усунено критичний баг, через який бот зависав при спробі перевести карти наприкінці гри в умовах обмеженого розміру руки суперника. Тепер бот коректно переходить до захисту або бере карти!\n\n• Оптимізація: Загальні покращення синхронізації ігрових станів.",
+        "CHANGELOG_TEXT" to "Версія 0.3 (Багатокористувацьке оновлення)\n\n• Повноцінні локальні Wi-Fi партії для 2–6 гравців із закритими руками та перевіркою ходів на пристрої хоста.\n\n• Класичний і перекидний режими, пошук кімнат, чат лобі та швидкі повідомлення під час гри.\n\n• Виправлено зависання бота наприкінці гри та покращено синхронізацію.",
         "SETTINGS" to "Налаштування",
         "SOUND_TAB" to "Звук",
         "LANG_TAB" to "Мова",
@@ -561,6 +563,7 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
         // Handle closing networking resources if leaving multiplayer hubs
         if (screen != Screen.GAME_TABLE && screen != Screen.MULTIPLAYER_HUB) {
             multiplayerManager.stopAll()
+            multiplayerGameActive = false
         }
         _currentScreen.value = screen
     }
@@ -574,6 +577,14 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
 
         val snapshot = _gameState.value
         if (snapshot.matchStatus == MatchStatus.PLAYING) {
+            if (_activeMode.value != GameMode.OFFLINE && multiplayerGameActive) {
+                multiplayerManager.sendMessage("MULTI_ABORT")
+                val finalSnapshot = snapshot.copy(matchStatus = MatchStatus.LOST)
+                _gameState.value = finalSnapshot
+                checkAndPersistRoomResult(finalSnapshot)
+                navigateTo(Screen.MAIN_MENU)
+                return
+            }
             // Forfeit is equivalent to defeat
             engine.matchStatus = MatchStatus.LOST
             engine.log("Player surrendered and left the match.", "Игрок сдался и вышел из партии.")
@@ -630,38 +641,41 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
         _activeMode.value = GameMode.ONLINE_HOST
         hasPersistedThisGame = false
         _opponentNickname.value = "Guest"
-        multiplayerManager.startHost()
+        val pName = _playerNickname.value.ifBlank { "Player" }
+        multiplayerManager.startHost(
+            capacity = _mpLobbyPlayersCount.value,
+            hostNickname = pName
+        )
         _currentScreen.value = Screen.MULTIPLAYER_HUB
-        
-        // Listen to host connection successful
-        viewModelScope.launch {
-            multiplayerManager.connectionState.collect { netState ->
-                if (netState == MultiplayerManager.State.CONNECTED && _activeMode.value == GameMode.ONLINE_HOST) {
-                    val pName = if (_playerNickname.value.isBlank()) "Player" else _playerNickname.value
-                    // Send nickname immediately on connection
-                    multiplayerManager.sendMessage("NICKNAME:$pName")
-                    
-                    // Initialize game and send immediately
-                    delay(300) // gentle networking stabilization delay
-                    hasPersistedThisGame = false
-                    val deckOption = _mpLobbyDeckOption.value
-                    val deckSize = if (deckOption == OfflineDeckOption.DECK_52) 52 else 36
-                    val customDeck = if (deckOption == OfflineDeckOption.CUSTOM) _customDeckIds.value else null
-                    val transferEnabled = (_mpLobbySubMode.value == OfflineSubMode.TRANSFER)
-                    engine.startMatch(
-                        player1Name = pName,
-                        player2Name = _opponentNickname.value,
-                        isBotGame = false,
-                        deckSize = deckSize,
-                        isTransferMode = transferEnabled,
-                        customDeckIds = customDeck
-                    )
-                    com.example.audio.DurakAudioManager.playSFX(1)
-                    pushHostStateToClient()
-                    _currentScreen.value = Screen.GAME_TABLE
-                }
-            }
-        }
+    }
+
+    /** Starts a host-authoritative game for every player currently in the room. */
+    fun startHostedMatch(): Boolean {
+        val room = multiplayerManager.lobby.value ?: return false
+        if (_activeMode.value != GameMode.ONLINE_HOST || room.players.size !in 2..6) return false
+        val pName = _playerNickname.value.ifBlank { "Player" }
+        _opponentNickname.value = room.players.firstOrNull { !it.isHost }?.nickname ?: "Guest"
+        hasPersistedThisGame = false
+        val deckOption = _mpLobbyDeckOption.value
+        val deckSize = if (deckOption == OfflineDeckOption.DECK_52) 52 else 36
+        val customDeck = if (deckOption == OfflineDeckOption.CUSTOM) {
+            _customDeckIds.value.takeIf { it.size >= room.players.size * 6 }
+        } else null
+        val started = runCatching {
+            multiplayerEngine.start(
+                players = room.players.map { MultiplayerDurakEngine.Seat(it.id, if (it.isHost) pName else it.nickname) },
+                deckSize = deckSize,
+                transferMode = _mpLobbySubMode.value == OfflineSubMode.TRANSFER,
+                customDeckIds = customDeck
+            )
+        }.isSuccess
+        if (!started) return false
+        if (!multiplayerManager.lockLobbyForMatch()) return false
+        multiplayerGameActive = true
+        com.example.audio.DurakAudioManager.playSFX(1)
+        pushMultiplayerState()
+        _currentScreen.value = Screen.GAME_TABLE
+        return true
     }
 
     // Starts client discovery and searches hosts
@@ -670,24 +684,26 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
         _opponentNickname.value = "Host"
         multiplayerManager.startHostDiscovery()
         _currentScreen.value = Screen.MULTIPLAYER_HUB
+    }
 
-        // Listen for client connection successful
+    fun connectToIpAddress(ip: String) {
+        _activeMode.value = GameMode.ONLINE_CLIENT
+        val entered = ip.trim()
+        val discoveredByCode = multiplayerManager.discoveredHosts.value.firstOrNull { service ->
+            service.serviceName.removePrefix("Durak-").equals(entered, ignoreCase = true)
+        }
+        multiplayerManager.connectToHost(discoveredByCode?.host?.hostAddress ?: entered)
         viewModelScope.launch {
-            multiplayerManager.connectionState.collect { netState ->
-                if (netState == MultiplayerManager.State.CONNECTED && _activeMode.value == GameMode.ONLINE_CLIENT) {
-                    val pName = if (_playerNickname.value.isBlank()) "Player" else _playerNickname.value
-                    // Send nickname immediately on connection
-                    multiplayerManager.sendMessage("NICKNAME:$pName")
-                    com.example.audio.DurakAudioManager.playSFX(1)
-                    _currentScreen.value = Screen.GAME_TABLE
+            multiplayerManager.connectionState.collect { state ->
+                if (state == MultiplayerManager.State.CONNECTED && _activeMode.value == GameMode.ONLINE_CLIENT) {
+                    multiplayerManager.joinLobby(_playerNickname.value.ifBlank { "Player" })
+                    return@collect
                 }
             }
         }
     }
 
-    fun connectToIpAddress(ip: String) {
-        multiplayerManager.connectToHost(ip)
-    }
+    fun sendLobbyChat(text: String) = multiplayerManager.sendLobbyChat(text)
 
     // --- PLAYER ACTION ROUTERS ---
 
@@ -737,57 +753,32 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
                 }
             }
         } else if (_activeMode.value == GameMode.ONLINE_HOST) {
-            // Host plays card
-            val isUserAttacking = (engine.attackerId == "player")
-            if (isUserAttacking) {
-                if (!intentTransferOnly) {
-                    if (engine.performAttack("player", card)) {
-                        com.example.audio.DurakAudioManager.playSFX(2)
-                        pushHostStateToClient()
-                    }
+            val changed = when {
+                intentTransferOnly -> multiplayerEngine.transfer("host", card)
+                snapshot.defenderPlayerId == "host" -> {
+                    val target = targetAttackCard ?: snapshot.tablePairs.firstOrNull { it.defenseCard == null }?.attackCard
+                    target != null && multiplayerEngine.defend("host", target, card)
                 }
-            } else {
-                val canTransfer = engine.isTransferMode && 
-                        engine.tablePairs.isNotEmpty() && 
-                        engine.tablePairs.all { it.defenseCard == null } &&
-                        engine.tablePairs.any { it.attackCard.rank == card.rank }
-
-                if (canTransfer && intentTransferOnly) {
-                    if (engine.performTransfer("player", card)) {
-                        com.example.audio.DurakAudioManager.playSFX(4)
-                        pushHostStateToClient()
-                    }
-                } else if (!intentTransferOnly) {
-                    val undefendedPair = if (targetAttackCard != null) {
-                        engine.tablePairs.find { it.attackCard == targetAttackCard && it.defenseCard == null }
-                    } else {
-                        engine.tablePairs.find { it.defenseCard == null }
-                    }
-                    if (undefendedPair != null) {
-                        if (engine.performDefense("player", undefendedPair.attackCard, card)) {
-                            com.example.audio.DurakAudioManager.playSFX(2)
-                            pushHostStateToClient()
-                        }
-                    }
-                }
+                else -> multiplayerEngine.attack("host", card)
+            }
+            if (changed) {
+                com.example.audio.DurakAudioManager.playSFX(if (intentTransferOnly) 4 else 2)
+                pushMultiplayerState()
             }
         } else {
-            // Client plays card (Submit intent action to Host)
-            val isClientAttacking = (snapshot.attackerPlayerId == "opponent") // From client perspective, host is 'player' and attacker id means opponent is attacking (which is client)
+            // A client sends only an intent; the host validates it and publishes a fresh private projection.
             val payload = if (intentTransferOnly) {
-                NetworkProtocol.encodeActionTransfer(card)
-            } else if (isClientAttacking) {
-                NetworkProtocol.encodeActionAttack(card)
-            } else {
+                MultiplayerGameProtocol.transfer(card)
+            } else if (snapshot.defenderPlayerId == snapshot.localPlayerId) {
                 val undefendedPair = if (targetAttackCard != null) {
                     snapshot.tablePairs.find { it.attackCard == targetAttackCard && it.defenseCard == null }
                 } else {
                     snapshot.tablePairs.find { it.defenseCard == null }
                 }
                 if (undefendedPair != null) {
-                    NetworkProtocol.encodeActionDefend(undefendedPair.attackCard, card)
+                    MultiplayerGameProtocol.defend(undefendedPair.attackCard, card)
                 } else null
-            }
+            } else MultiplayerGameProtocol.attack(card)
             if (payload != null) {
                 multiplayerManager.sendMessage(payload)
                 if (intentTransferOnly) {
@@ -804,21 +795,9 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
         if (snapshot.matchStatus != MatchStatus.PLAYING) return
 
         if (_activeMode.value == GameMode.ONLINE_HOST) {
-            if (engine.attackerId == "player") {
-                val pairIndex = engine.tablePairs.indexOfFirst { it.attackCard == card && it.defenseCard == null }
-                if (pairIndex != -1) {
-                    engine.tablePairs.removeAt(pairIndex)
-                    engine.playerHand.add(card)
-                    engine.log("You took back card ${card.rank.symbol}${card.suit.symbol}", "Вы забрали назад карту ${card.rank.symbol}${card.suit.symbol}")
-                    pushHostStateToClient()
-                }
-            }
+            if (multiplayerEngine.takeBack("host", card)) pushMultiplayerState()
         } else if (_activeMode.value == GameMode.ONLINE_CLIENT) {
-            val isClientAttacking = (snapshot.attackerPlayerId == "opponent")
-            if (isClientAttacking) {
-                val payload = "ACTION_TAKE_BACK:${NetworkProtocol.encodeCard(card)}"
-                multiplayerManager.sendMessage(payload)
-            }
+            multiplayerManager.sendMessage(MultiplayerGameProtocol.takeBack(card))
         }
     }
 
@@ -834,14 +813,9 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
                 triggerBotRoutineIfNeeded()
             }
         } else if (_activeMode.value == GameMode.ONLINE_HOST) {
-            if (engine.performBito("player")) {
-                if (wasTaking) {
-                    com.example.audio.DurakAudioManager.playSFX(7)
-                }
-                pushHostStateToClient()
-            }
+            if (multiplayerEngine.bito("host")) pushMultiplayerState()
         } else {
-            multiplayerManager.sendMessage(NetworkProtocol.encodeActionBito())
+            multiplayerManager.sendMessage(MultiplayerGameProtocol.bito())
         }
     }
 
@@ -854,12 +828,12 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
                 triggerBotRoutineIfNeeded()
             }
         } else if (_activeMode.value == GameMode.ONLINE_HOST) {
-            if (engine.performTakeAll("player")) {
+            if (multiplayerEngine.take("host")) {
                 com.example.audio.DurakAudioManager.playSFX(7)
-                pushHostStateToClient()
+                pushMultiplayerState()
             }
         } else {
-            multiplayerManager.sendMessage(NetworkProtocol.encodeActionTake())
+            multiplayerManager.sendMessage(MultiplayerGameProtocol.take())
         }
     }
 
@@ -899,6 +873,67 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
         multiplayerManager.sendMessage(serializedMsg)
 
         checkAndPersistRoomResult(hostSnapshot)
+    }
+
+    private fun pushMultiplayerState() {
+        val room = multiplayerManager.lobby.value ?: return
+        val hostState = MultiplayerGameProtocol.parseState(
+            MultiplayerGameProtocol.state(multiplayerEngine.snapshotFor("host"))
+        ) ?: return
+        applyMultiplayerState(hostState, "host")
+        room.players.asSequence().filterNot { it.isHost }.forEach { player ->
+            multiplayerManager.sendMessageToPeer(
+                player.id,
+                MultiplayerGameProtocol.state(multiplayerEngine.snapshotFor(player.id))
+            )
+        }
+    }
+
+    private fun applyMultiplayerState(state: MultiplayerGameProtocol.State, localId: String) {
+        val local = state.players.firstOrNull { it.id == localId }
+        val others = state.players.filterNot { it.id == localId }
+        val primary = others.firstOrNull { it.id == state.currentPlayerId }
+            ?: others.firstOrNull { it.id == state.defenderId }
+            ?: others.firstOrNull()
+        val hasUndefended = state.table.any { it.defenseCard == null }
+        val localIsDefender = state.defenderId == localId
+        val localCanAct = if (localIsDefender) {
+            hasUndefended && !state.taking
+        } else {
+            !state.taking && if (state.table.isEmpty()) state.currentPlayerId == localId else true
+        }
+        val status = when {
+            !state.finished -> MatchStatus.PLAYING
+            state.loserId == null -> MatchStatus.DRAW
+            state.loserId == localId -> MatchStatus.LOST
+            else -> MatchStatus.WON
+        }
+        val snapshot = GameStateSnapshot(
+            trumpCard = state.trumpCard,
+            trumpSuit = state.trumpSuit,
+            deckSize = state.deckSize,
+            tablePairs = state.table,
+            discardPileSize = state.discardSize,
+            isLocalTurn = localCanAct,
+            localHand = state.hand,
+            opponentHandSize = primary?.handSize ?: 0,
+            opponentName = primary?.nickname ?: "Opponent",
+            matchStatus = status,
+            attackerPlayerId = state.players.firstOrNull { it.isAttacker }?.id.orEmpty(),
+            canTake = localIsDefender && hasUndefended && !state.taking,
+            canBito = !localIsDefender && state.table.isNotEmpty() && (state.taking || !hasUndefended),
+            isTransferMode = state.transferMode,
+            isDefenderTaking = state.taking,
+            localPlayerId = local?.id ?: localId,
+            currentPlayerId = state.currentPlayerId,
+            defenderPlayerId = state.defenderId,
+            opponents = others.map {
+                RemotePlayerSnapshot(it.id, it.nickname, it.handSize, it.isAttacker, it.isDefender)
+            }
+        )
+        _opponentNickname.value = snapshot.opponentName
+        _gameState.value = snapshot
+        checkAndPersistRoomResult(snapshot)
     }
 
     // Triggered in offline mode to sync visual views and evaluate bots
@@ -969,7 +1004,53 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     // Handles Client-to-Host parsed action payloads
-    private fun handleNetworkMessage(msg: String) {
+    private fun handleNetworkMessage(msg: String, senderId: String? = null) {
+        if (msg == "MULTI_ABORT") {
+            multiplayerGameActive = false
+            _gameState.value = _gameState.value.copy(matchStatus = MatchStatus.PLAYER_DISCONNECTED)
+            return
+        }
+        if (_activeMode.value == GameMode.ONLINE_CLIENT) {
+            val multiState = MultiplayerGameProtocol.parseState(msg)
+            if (multiState != null) {
+                multiplayerGameActive = true
+                val localId = multiplayerManager.localPlayerId.value
+                    ?: multiState.players.firstOrNull { it.nickname == _playerNickname.value }?.id
+                    ?: return
+                val oldState = _gameState.value
+                applyMultiplayerState(multiState, localId)
+                if (_currentScreen.value == Screen.MULTIPLAYER_HUB) {
+                    com.example.audio.DurakAudioManager.playSFX(1)
+                    _currentScreen.value = Screen.GAME_TABLE
+                } else if (oldState.tablePairs.size != multiState.table.size ||
+                    oldState.tablePairs.count { it.defenseCard != null } != multiState.table.count { it.defenseCard != null }) {
+                    com.example.audio.DurakAudioManager.playSFX(3)
+                }
+                return
+            }
+        }
+
+        if (_activeMode.value == GameMode.ONLINE_HOST && multiplayerGameActive) {
+            if (msg == "MULTI_DISCONNECT") {
+                multiplayerManager.sendMessage("MULTI_ABORT")
+                multiplayerGameActive = false
+                _gameState.value = _gameState.value.copy(matchStatus = MatchStatus.PLAYER_DISCONNECTED)
+                return
+            }
+            val playerId = senderId ?: return
+            val changed = when (val action = MultiplayerGameProtocol.parseAction(msg)) {
+                is MultiplayerGameProtocol.Action.Attack -> multiplayerEngine.attack(playerId, action.card)
+                is MultiplayerGameProtocol.Action.Defend -> multiplayerEngine.defend(playerId, action.attack, action.defense)
+                is MultiplayerGameProtocol.Action.Transfer -> multiplayerEngine.transfer(playerId, action.card)
+                is MultiplayerGameProtocol.Action.TakeBack -> multiplayerEngine.takeBack(playerId, action.card)
+                MultiplayerGameProtocol.Action.Take -> multiplayerEngine.take(playerId)
+                MultiplayerGameProtocol.Action.Bito -> multiplayerEngine.bito(playerId)
+                null -> false
+            }
+            if (changed) pushMultiplayerState()
+            return
+        }
+
         if (msg == "OPPONENT_SURRENDERED") {
             engine.matchStatus = MatchStatus.WON
             engine.log("Opponent surrendered and left the match.", "Оппонент сдался и вышел из партии.")
@@ -1094,6 +1175,10 @@ class DurakViewModel(application: Application) : AndroidViewModel(application) {
                 
                 _gameState.value = currentSnapshot
                 checkAndPersistRoomResult(currentSnapshot)
+                if (_activeMode.value == GameMode.ONLINE_CLIENT && _currentScreen.value == Screen.MULTIPLAYER_HUB) {
+                    com.example.audio.DurakAudioManager.playSFX(1)
+                    _currentScreen.value = Screen.GAME_TABLE
+                }
 
                 // Let's trigger opponent/host plays on Client device
                 if (oldSnapshot.matchStatus == MatchStatus.PLAYING) {

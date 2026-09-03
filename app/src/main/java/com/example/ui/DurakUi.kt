@@ -349,7 +349,7 @@ fun SplashScreen(viewModel: DurakViewModel) {
             )
 
             Text(
-                text = "Version 0.3-pre2",
+                text = "Version 0.3",
                 fontSize = 12.sp,
                 fontStyle = FontStyle.Italic,
                 color = Color(0xFF909094).copy(alpha = 0.8f),
@@ -725,7 +725,7 @@ fun MainMenuScreen(viewModel: DurakViewModel, statsList: List<GameStat>) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "0.3-pre2",
+                    text = "0.3",
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f)
@@ -1541,15 +1541,14 @@ fun MultiplayerHubScreen(viewModel: DurakViewModel) {
     val discoveredList by viewModel.discoveredHosts.collectAsStateWithLifecycle()
     val localIp by viewModel.localIp.collectAsStateWithLifecycle()
     val appLanguage by viewModel.appLanguage.collectAsStateWithLifecycle()
+    val lobby by viewModel.multiplayerLobby.collectAsStateWithLifecycle()
 
     var activeTabHost by remember { mutableStateOf(true) }
     var inputIp by remember { mutableStateOf("") }
+    var chatDraft by remember { mutableStateOf("") }
 
-    DisposableEffect(Unit) {
-        viewModel.startSearchingHosts()
-        onDispose {
-            // Stops discover on screen exit
-        }
+    LaunchedEffect(activeTabHost) {
+        if (!activeTabHost) viewModel.startSearchingHosts()
     }
 
     Column(
@@ -1584,6 +1583,7 @@ fun MultiplayerHubScreen(viewModel: DurakViewModel) {
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
+                .verticalScroll(rememberScrollState())
                 .padding(vertical = 16.dp)
         ) {
             Row(
@@ -1841,20 +1841,51 @@ fun MultiplayerHubScreen(viewModel: DurakViewModel) {
 
                         Spacer(modifier = Modifier.height(16.dp))
 
-                        val noticeText = if (appLanguage == AppLanguage.RU) {
-                            "Больше двух игроков в разработке"
-                        } else if (appLanguage == AppLanguage.IT) {
-                            "Più di due giocatori in sviluppo"
-                        } else {
-                            "More than two players in development"
+                        val playerCount by viewModel.mpLobbyPlayersCount.collectAsStateWithLifecycle()
+                        Text(
+                            text = if (appLanguage == AppLanguage.RU) "Размер комнаты" else "Room size",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                            modifier = Modifier.align(Alignment.Start)
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            (2..6).forEach { count ->
+                                val selected = playerCount == count
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clip(RoundedCornerShape(10.dp))
+                                        .background(if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant)
+                                        .clickable(enabled = networkState == MultiplayerManager.State.IDLE) { viewModel.setMpLobbyPlayersCount(count) }
+                                        .padding(vertical = 9.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = count.toString(),
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+                            }
                         }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+                        val noticeText = if (appLanguage == AppLanguage.RU) {
+                            "Полноценная локальная партия: от 2 до 6 игроков. Хост проверяет все ходы."
+                        } else { "Complete local match for 2–6 players. The host validates every move." }
 
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clip(RoundedCornerShape(12.dp))
-                                .background(MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.2f))
-                                .border(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.3f), RoundedCornerShape(12.dp))
+                                .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f))
+                                .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f), RoundedCornerShape(12.dp))
                                 .padding(vertical = 12.dp, horizontal = 16.dp),
                             contentAlignment = Alignment.Center
                         ) {
@@ -1865,12 +1896,12 @@ fun MultiplayerHubScreen(viewModel: DurakViewModel) {
                                 Icon(
                                     imageVector = Icons.Default.Info,
                                     contentDescription = "info",
-                                    tint = MaterialTheme.colorScheme.error,
+                                    tint = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.size(16.dp)
                                 )
                                 Text(
                                     text = noticeText,
-                                    color = MaterialTheme.colorScheme.onErrorContainer,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
                                     fontWeight = FontWeight.Medium,
                                     fontSize = 12.sp,
                                     textAlign = TextAlign.Center
@@ -1880,21 +1911,36 @@ fun MultiplayerHubScreen(viewModel: DurakViewModel) {
 
                         Spacer(modifier = Modifier.height(24.dp))
 
-                        if (networkState == MultiplayerManager.State.HOSTING) {
+                        if (networkState == MultiplayerManager.State.HOSTING || networkState == MultiplayerManager.State.CONNECTED) {
+                            if (lobby != null) {
+                                Spacer(modifier = Modifier.height(16.dp))
+                                MultiplayerLobbyCard(
+                                    lobby = lobby!!,
+                                    isHost = true,
+                                    appLanguage = appLanguage,
+                                    chatDraft = chatDraft,
+                                    onChatDraftChange = { chatDraft = it },
+                                    onSendChat = {
+                                        viewModel.sendLobbyChat(chatDraft)
+                                        chatDraft = ""
+                                    },
+                                    onStartMatch = { viewModel.startHostedMatch() }
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(16.dp))
                             Text(
-                                text = viewModel.getString("WAITING_LOBBY"),
+                                text = if ((lobby?.players?.size ?: 0) >= 2) {
+                                    if (appLanguage == AppLanguage.RU) "Можно начинать матч: ${lobby?.players?.size ?: 0} игроков" else "Ready to start: ${lobby?.players?.size ?: 0} players"
+                                } else viewModel.getString("WAITING_LOBBY"),
                                 fontSize = 14.sp,
                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                                 textAlign = TextAlign.Center
                             )
 
-                            Spacer(modifier = Modifier.height(16.dp))
-
-                            CircularProgressIndicator(
-                                color = MaterialTheme.colorScheme.primary,
-                                strokeWidth = 3.dp,
-                                modifier = Modifier.size(24.dp)
-                            )
+                            if (networkState == MultiplayerManager.State.HOSTING) {
+                                Spacer(modifier = Modifier.height(16.dp))
+                                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary, strokeWidth = 3.dp, modifier = Modifier.size(24.dp))
+                            }
                         } else {
                             Button(
                                 onClick = { viewModel.startHostingLobby() },
@@ -1912,6 +1958,21 @@ fun MultiplayerHubScreen(viewModel: DurakViewModel) {
             } else {
                 // PANEL: CLIENT CONFIG (DISCOVERY & MANUAL)
                 Column(modifier = Modifier.fillMaxWidth()) {
+                    if (lobby != null) {
+                        MultiplayerLobbyCard(
+                            lobby = lobby!!,
+                            isHost = false,
+                            appLanguage = appLanguage,
+                            chatDraft = chatDraft,
+                            onChatDraftChange = { chatDraft = it },
+                            onSendChat = {
+                                viewModel.sendLobbyChat(chatDraft)
+                                chatDraft = ""
+                            },
+                            onStartMatch = null
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
                     Text(
                         text = viewModel.getString("NSD_STATUS"),
                         fontSize = 13.sp,
@@ -1975,7 +2036,9 @@ fun MultiplayerHubScreen(viewModel: DurakViewModel) {
                                     ) {
                                         Column {
                                             Text(
-                                                text = "Host Lobby",
+                                                text = if (appLanguage == AppLanguage.RU) {
+                                                    "Комната ${service.serviceName.removePrefix("Durak-")}"
+                                                } else "Room ${service.serviceName.removePrefix("Durak-")}",
                                                 fontWeight = FontWeight.Bold,
                                                 color = MaterialTheme.colorScheme.onPrimaryContainer
                                             )
@@ -2017,7 +2080,7 @@ fun MultiplayerHubScreen(viewModel: DurakViewModel) {
                             OutlinedTextField(
                                 value = inputIp,
                                 onValueChange = { inputIp = it },
-                                label = { Text(viewModel.getString("ENTER_HOST_IP")) },
+                                        label = { Text(if (appLanguage == AppLanguage.RU) "IP или код комнаты" else "IP or room code") },
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                 modifier = Modifier.fillMaxWidth(),
                                 shape = RoundedCornerShape(16.dp)
@@ -2069,12 +2132,105 @@ fun MultiplayerHubScreen(viewModel: DurakViewModel) {
     }
 }
 
+@Composable
+private fun MultiplayerLobbyCard(
+    lobby: com.example.network.MultiplayerLobby.Snapshot,
+    isHost: Boolean,
+    appLanguage: AppLanguage,
+    chatDraft: String,
+    onChatDraftChange: (String) -> Unit,
+    onSendChat: () -> Unit,
+    onStartMatch: (() -> Unit)?
+) {
+    val russian = appLanguage == AppLanguage.RU
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f))
+    ) {
+        Column(modifier = Modifier.padding(14.dp)) {
+            Text(
+                text = if (russian) "Комната ${lobby.roomCode} · ${lobby.players.size}/${lobby.capacity}" else "Room ${lobby.roomCode} · ${lobby.players.size}/${lobby.capacity}",
+                fontWeight = FontWeight.Black,
+                fontSize = 14.sp
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            lobby.players.forEach { player ->
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
+                    Icon(Icons.Default.Person, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = if (player.isHost) "${player.nickname} ${if (russian) "(хост)" else "(host)"}" else player.nickname,
+                        fontSize = 13.sp,
+                        fontWeight = if (player.isHost) FontWeight.Bold else FontWeight.Normal
+                    )
+                }
+            }
+            repeat((lobby.capacity - lobby.players.size).coerceAtLeast(0)) {
+                Text(
+                    text = if (russian) "○ Свободный слот" else "○ Open slot",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
+                    modifier = Modifier.padding(vertical = 2.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+            if (lobby.messages.isEmpty()) {
+                Text(
+                    text = if (russian) "Чат комнаты пуст" else "Room chat is empty",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f)
+                )
+            } else {
+                lobby.messages.takeLast(3).forEach { message ->
+                    Text(
+                        text = "${message.senderName}: ${message.text}",
+                        fontSize = 12.sp,
+                        maxLines = 1,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                    )
+                }
+            }
+            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                OutlinedTextField(
+                    value = chatDraft,
+                    onValueChange = { onChatDraftChange(it.take(160)) },
+                    modifier = Modifier.weight(1f),
+                    singleLine = true,
+                    maxLines = 1,
+                    placeholder = { Text(if (russian) "Сообщение" else "Message", fontSize = 12.sp) },
+                    shape = RoundedCornerShape(12.dp)
+                )
+                IconButton(onClick = { if (chatDraft.isNotBlank()) onSendChat() }) {
+                    Icon(Icons.Default.Send, contentDescription = if (russian) "Отправить" else "Send", tint = MaterialTheme.colorScheme.primary)
+                }
+            }
+            if (isHost && onStartMatch != null) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Button(
+                    onClick = onStartMatch,
+                    enabled = lobby.players.size in 2..lobby.capacity,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text(
+                        if (russian) "Начать матч (${lobby.players.size} игроков)" else "Start match (${lobby.players.size} players)",
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        }
+    }
+}
+
 private fun Modifier.fillLogLevel(): Modifier = this.fillMaxWidth()
 
 // --- SCREEN: GAME TABLE ---
 @Composable
 fun GameTableScreen(viewModel: DurakViewModel) {
     val snapshot by viewModel.gameState.collectAsStateWithLifecycle()
+    val lobby by viewModel.multiplayerLobby.collectAsStateWithLifecycle()
     val isThinking by viewModel.botThinking.collectAsStateWithLifecycle()
     val appLanguage by viewModel.appLanguage.collectAsStateWithLifecycle()
     val offlineSubMode by viewModel.offlineSubMode.collectAsStateWithLifecycle()
@@ -2083,8 +2239,8 @@ fun GameTableScreen(viewModel: DurakViewModel) {
     val canPlayerTransferNow = isTransferEnabled && 
             snapshot.tablePairs.isNotEmpty() && 
             snapshot.tablePairs.all { it.defenseCard == null } &&
-            (if (activeMode == GameMode.ONLINE_CLIENT) snapshot.attackerPlayerId == "player" else snapshot.attackerPlayerId == "opponent") &&
-            snapshot.opponentHandSize >= snapshot.tablePairs.size + 1
+            (if (activeMode == GameMode.OFFLINE) snapshot.attackerPlayerId == "opponent"
+             else snapshot.defenderPlayerId == snapshot.localPlayerId)
 
     var showLogs by remember { mutableStateOf(false) }
 
@@ -2251,12 +2407,40 @@ fun GameTableScreen(viewModel: DurakViewModel) {
                     }
                 }
 
-                // 2. MIDDLE TOP: Immersive Opponent Hand (Minimalist cards backs)
-                Row(
+                // 2. MIDDLE TOP: every remote player and their private hand size.
+                if (snapshot.opponents.isNotEmpty()) {
+                    LazyRow(
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        contentPadding = PaddingValues(horizontal = 4.dp)
+                    ) {
+                        items(snapshot.opponents, key = { it.id }) { player ->
+                            val role = when {
+                                player.isDefender -> if (appLanguage == AppLanguage.RU) "защита" else "defending"
+                                player.isAttacker -> if (appLanguage == AppLanguage.RU) "атака" else "attacking"
+                                else -> if (appLanguage == AppLanguage.RU) "ожидает" else "waiting"
+                            }
+                            Column(
+                                modifier = Modifier
+                                    .widthIn(min = 104.dp)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(Color.White.copy(alpha = 0.08f))
+                                    .border(
+                                        1.dp,
+                                        if (player.id == snapshot.currentPlayerId) Color(0xFFD1E4FF) else Color.White.copy(alpha = 0.12f),
+                                        RoundedCornerShape(12.dp)
+                                    )
+                                    .padding(horizontal = 10.dp, vertical = 7.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Text(player.name, color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                                Text("${player.handSize} • $role", color = Color(0xFFB7BDC5), fontSize = 9.sp, maxLines = 1)
+                            }
+                        }
+                    }
+                } else Row(
                     horizontalArrangement = Arrangement.Center,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 4.dp)
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
                 ) {
                     val visibleBotsCount = minOf(snapshot.opponentHandSize, 6)
                     repeat(visibleBotsCount) {
@@ -2610,6 +2794,42 @@ fun GameTableScreen(viewModel: DurakViewModel) {
                     .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
+                if (activeMode != GameMode.OFFLINE) {
+                    lobby?.messages?.lastOrNull()?.let { message ->
+                        Text(
+                            text = "${message.senderName}: ${message.text}",
+                            color = Color.White.copy(alpha = 0.82f),
+                            fontSize = 11.sp,
+                            maxLines = 1,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                            modifier = Modifier.padding(bottom = 6.dp)
+                        )
+                    }
+                    val quickMessages = when (appLanguage) {
+                        AppLanguage.RU -> listOf("Привет! 👋", "Хороший ход 👍", "Спасибо!", "Удачи! 🍀")
+                        AppLanguage.UA -> listOf("Привіт! 👋", "Гарний хід 👍", "Дякую!", "Удачі! 🍀")
+                        AppLanguage.IT -> listOf("Ciao! 👋", "Bella mossa 👍", "Grazie!", "Buona fortuna! 🍀")
+                        else -> listOf("Hello! 👋", "Nice move 👍", "Thanks!", "Good luck! 🍀")
+                    }
+                    LazyRow(
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                        horizontalArrangement = Arrangement.Center,
+                        contentPadding = PaddingValues(horizontal = 4.dp)
+                    ) {
+                        items(quickMessages) { message ->
+                            Box(
+                                modifier = Modifier
+                                    .padding(horizontal = 3.dp)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(Color.White.copy(alpha = 0.08f))
+                                    .clickable { viewModel.sendLobbyChat(message) }
+                                    .padding(horizontal = 10.dp, vertical = 6.dp)
+                            ) {
+                                Text(message, color = Color.White, fontSize = 10.sp, maxLines = 1)
+                            }
+                        }
+                    }
+                }
                 // Turn Status Text inside Footer
                 Text(
                     text = if (snapshot.isDefenderTaking) {
@@ -2635,7 +2855,9 @@ fun GameTableScreen(viewModel: DurakViewModel) {
                         else "YOUR TURN"
                     } else {
                         val isMultiplayer = viewModel.activeMode.value != GameMode.OFFLINE
-                        val opponentNick = snapshot.opponentName
+                        val opponentNick = snapshot.opponents.firstOrNull { it.id == snapshot.currentPlayerId }?.name
+                            ?: snapshot.opponents.firstOrNull { it.id == snapshot.defenderPlayerId }?.name
+                            ?: snapshot.opponentName
                         if (appLanguage == AppLanguage.RU) "ХОД: ${if (isMultiplayer) opponentNick.uppercase() else "БОТ"}"
                         else if (appLanguage == AppLanguage.UA) "ХІД: ${if (isMultiplayer) opponentNick.uppercase() else "БОТ"}"
                         else if (appLanguage == AppLanguage.IT) "TURNO DI: ${if (isMultiplayer) opponentNick.uppercase() else "BOT"}"

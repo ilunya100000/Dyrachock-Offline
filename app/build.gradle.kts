@@ -14,8 +14,8 @@ android {
     applicationId = "com.aistudio.durak.kgworp"
     minSdk = 24
     targetSdk = 36
-    versionCode = 3
-    versionName = "0.3"
+    versionCode = 4
+    versionName = "0.3.1"
     manifestPlaceholders["appLabel"] = "@string/app_name"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -26,7 +26,7 @@ android {
       val keystorePath = System.getenv("KEYSTORE_PATH") ?: "${rootDir}/my-upload-key.jks"
       storeFile = file(keystorePath)
       storePassword = System.getenv("STORE_PASSWORD")
-      keyAlias = "upload"
+      keyAlias = System.getenv("KEY_ALIAS") ?: "upload"
       keyPassword = System.getenv("KEY_PASSWORD")
     }
   }

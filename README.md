@@ -1,5 +1,11 @@
 # Dyrachok Offline
 
+## 🛠️ Версия 0.3.1 — Multiplayer Bug Fix
+
+Исправления партий на 3–6 игроков, порядка сетевых состояний и отображения всех участников. Roadmap временно меняется. Подробности и проверки: [CHANGELOG-0.3.1.md](CHANGELOG-0.3.1.md).
+
+Patch 0.3.1 fixes multiplayer rules, ordered state delivery and the table layout for 2–6 players. The roadmap is temporarily being updated. See the changelog above.
+
 <details>
 <summary><b>🇷🇺 Русский (Нажмите, чтобы развернуть)</b></summary>
 

@@ -37,7 +37,7 @@ class MultiplayerDurakEngine(private val random: SecureRandom = SecureRandom()) 
     private val attackOwners = mutableListOf<String>()
     private var attackerIndex = 0
     private var defenderIndex = 1
-    private var currentAttackerIndex = 0
+    private var transferredThisRound = false
     private var defenderStartHandSize = 0
     private var taking = false
     private var discardSize = 0
@@ -58,6 +58,8 @@ class MultiplayerDurakEngine(private val random: SecureRandom = SecureRandom()) 
         attackOwners.clear()
         discardSize = 0
         taking = false
+        transferredThisRound = false
+        defenderStartHandSize = 0
         finished = false
         loserId = null
         this.transferMode = transferMode
@@ -67,18 +69,18 @@ class MultiplayerDurakEngine(private val random: SecureRandom = SecureRandom()) 
         }
         require(deck.size >= players.size * 6) { "The selected deck is too small for all players" }
         repeat(7) { deck.shuffle(random) }
+        // The bottom card defines trump even when six players exhaust the deck.
+        trumpCard = deck.first()
+        trumpSuit = trumpCard!!.suit
         repeat(6) {
             seats.forEach { seat -> drawOne(seat.id) }
         }
-        trumpCard = deck.lastOrNull()
-        trumpSuit = trumpCard?.suit ?: Suit.SPADES
         attackerIndex = firstAttackerIndex()
         defenderIndex = nextActiveIndex(attackerIndex)
-        currentAttackerIndex = attackerIndex
     }
 
     fun attack(playerId: String, card: Card): Boolean {
-        if (finished || taking || playerId == defenderId || !isAttackTurn(playerId)) return false
+        if (finished || playerId == defenderId || !isAttackTurn(playerId)) return false
         val hand = hands[playerId] ?: return false
         if (!hand.contains(card) || table.size >= 6) return false
         if (table.isEmpty()) defenderStartHandSize = hands[defenderId]?.size ?: 0
@@ -87,30 +89,32 @@ class MultiplayerDurakEngine(private val random: SecureRandom = SecureRandom()) 
         hand.remove(card)
         table += CardPair(card)
         attackOwners += playerId
-        currentAttackerIndex = nextAttackerIndex(playerId)
         return true
     }
 
     fun transfer(playerId: String, card: Card): Boolean {
         if (!transferMode || finished || taking || playerId != defenderId || table.isEmpty()) return false
-        if (table.any { it.defenseCard != null } || table.none { it.attackCard.rank == card.rank }) return false
+        if (table.size >= 6 || table.any { it.defenseCard != null } || table.none { it.attackCard.rank == card.rank }) return false
         val hand = hands[playerId] ?: return false
         val nextDefender = nextActiveIndex(defenderIndex)
+        if (nextDefender == defenderIndex) return false
         if (table.size + 1 > (hands[seats[nextDefender].id]?.size ?: 0)) return false
         if (!hand.remove(card)) return false
         table += CardPair(card)
         attackOwners += playerId
         attackerIndex = defenderIndex
         defenderIndex = nextDefender
-        currentAttackerIndex = attackerIndex
+        transferredThisRound = true
         defenderStartHandSize = hands[defenderId]?.size ?: 0
         return true
     }
 
     fun takeBack(playerId: String, card: Card): Boolean {
-        if (finished || taking) return false
-        val index = table.indexOfFirst { it.attackCard == card && it.defenseCard == null }
-        if (index < 0 || attackOwners.getOrNull(index) != playerId) return false
+        // Retract only the most recent uncommitted attack. A transfer changes
+        // roles, and removing an earlier card would invalidate other players' moves.
+        if (finished || taking || transferredThisRound || table.any { it.defenseCard != null }) return false
+        val index = table.lastIndex
+        if (index < 0 || table[index].attackCard != card || attackOwners.getOrNull(index) != playerId) return false
         table.removeAt(index)
         attackOwners.removeAt(index)
         hands[playerId]?.add(card) ?: return false
@@ -133,13 +137,11 @@ class MultiplayerDurakEngine(private val random: SecureRandom = SecureRandom()) 
         return true
     }
 
-    /** Any attacker may finish the attack once all table cards are defended,
-     * or finish a taking round after the defender has declared take. */
+    /** The lead attacker closes the round; helpers cannot close it for them. */
     fun bito(playerId: String): Boolean {
-        if (finished || playerId == defenderId || table.isEmpty()) return false
+        if (finished || playerId != attackerId || table.isEmpty()) return false
         if (!taking && table.any { it.defenseCard == null }) return false
         val defenderWasTaking = taking
-        val oldAttacker = attackerIndex
         val oldDefender = defenderIndex
         if (defenderWasTaking) {
             val defenderHand = hands[defenderId] ?: return false
@@ -150,13 +152,13 @@ class MultiplayerDurakEngine(private val random: SecureRandom = SecureRandom()) 
         table.clear()
         attackOwners.clear()
         refillHands()
-        val preferredAttacker = if (defenderWasTaking) oldAttacker else oldDefender
+        val preferredAttacker = if (defenderWasTaking) nextActiveIndex(oldDefender) else oldDefender
         attackerIndex = if (hands[seats[preferredAttacker].id].orEmpty().isNotEmpty() || deck.isNotEmpty()) {
             preferredAttacker
         } else nextActiveIndex(preferredAttacker)
         defenderIndex = nextActiveIndex(attackerIndex)
         taking = false
-        currentAttackerIndex = attackerIndex
+        transferredThisRound = false
         evaluateFinished()
         return true
     }
@@ -175,20 +177,10 @@ class MultiplayerDurakEngine(private val random: SecureRandom = SecureRandom()) 
 
     private val attackerId get() = seats[attackerIndex].id
     private val defenderId get() = seats[defenderIndex].id
-    private val currentPlayerId get() = seats[currentAttackerIndex].id
+    private val currentPlayerId get() = if (!taking && table.any { it.defenseCard == null }) defenderId else attackerId
 
     private fun isAttackTurn(playerId: String) = table.isEmpty().let { empty ->
         if (empty) playerId == attackerId else seats.any { it.id == playerId && it.id != defenderId }
-    }
-
-    private fun nextAttackerIndex(fromId: String): Int {
-        val start = seats.indexOfFirst { it.id == fromId }
-        var index = start
-        repeat(seats.size) {
-            index = (index + 1) % seats.size
-            if (seats[index].id != defenderId && hands[seats[index].id]?.isNotEmpty() == true) return index
-        }
-        return attackerIndex
     }
 
     private fun nextActiveIndex(from: Int): Int {
@@ -207,11 +199,12 @@ class MultiplayerDurakEngine(private val random: SecureRandom = SecureRandom()) 
     }
 
     private fun refillHands() {
-        var index = attackerIndex
-        repeat(seats.size) {
+        // Attackers draw clockwise first; the defender always draws last.
+        val order = seats.indices.map { (attackerIndex + it) % seats.size }
+            .filter { it != defenderIndex } + defenderIndex
+        order.forEach { index ->
             val id = seats[index].id
-            while (hands[id]!!.size < 6 && deck.isNotEmpty()) drawOne(id)
-            index = (index + 1) % seats.size
+            while (hands.getValue(id).size < 6 && deck.isNotEmpty()) drawOne(id)
         }
     }
 

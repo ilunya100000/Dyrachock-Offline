@@ -19,3 +19,7 @@ debug.keystore
 .apk-analysis/
 .apk-decompiled/
 .tools/
+
+/outputs/
+*.jks
+*.keystore

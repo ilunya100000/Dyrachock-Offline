@@ -349,7 +349,7 @@ fun SplashScreen(viewModel: DurakViewModel) {
             )
 
             Text(
-                text = "Version 0.3",
+                text = "Version 0.3.1",
                 fontSize = 12.sp,
                 fontStyle = FontStyle.Italic,
                 color = Color(0xFF909094).copy(alpha = 0.8f),
@@ -725,7 +725,7 @@ fun MainMenuScreen(viewModel: DurakViewModel, statsList: List<GameStat>) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "0.3",
+                    text = "0.3.1",
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f)
@@ -783,273 +783,13 @@ fun MainMenuScreen(viewModel: DurakViewModel, statsList: List<GameStat>) {
                 if (showRoadmapDialog) {
                     AlertDialog(
                         onDismissRequest = { showRoadmapDialog = false },
-                        title = {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Map,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
-                                Text(
-                                    text = when (appLanguage) {
-                                        AppLanguage.RU -> "Дорожная карта"
-                                        AppLanguage.UA -> "Дорожня карта"
-                                        AppLanguage.IT -> "Tabella di marcia"
-                                        else -> "Future Roadmap"
-                                    },
-                                    fontWeight = FontWeight.Black
-                                )
-                            }
-                        },
-                        text = {
-                            Column(
-                                modifier = Modifier
-                                    .verticalScroll(rememberScrollState())
-                                    .fillMaxWidth(),
-                                verticalArrangement = Arrangement.spacedBy(12.dp)
-                            ) {
-                                val milestones = listOf(
-                                    Triple(
-                                        when (appLanguage) {
-                                            AppLanguage.RU -> "Май (0.1.x)"
-                                            AppLanguage.UA -> "Травень (0.1.x)"
-                                            AppLanguage.IT -> "Maggio (0.1.x)"
-                                            else -> "May (0.1.x)"
-                                        },
-                                        when (appLanguage) {
-                                            AppLanguage.RU -> "Конструктор колоды и оптимизации интерфейса"
-                                            AppLanguage.UA -> "Конструктор колоди та оптимізації інтерфейсу"
-                                            AppLanguage.IT -> "Costruttore di mazzi e ottimizzazione dell'interfaccia"
-                                            else -> "Custom deck builder & interface optimizations"
-                                        },
-                                        Icons.Default.Build
-                                    ),
-                                    Triple(
-                                        when (appLanguage) {
-                                            AppLanguage.RU -> "0.2 - Музыкальное обновление"
-                                            AppLanguage.UA -> "0.2 - Музичне оновлення"
-                                            AppLanguage.IT -> "0.2 - Aggiornamento audio"
-                                            else -> "0.2 - Sound Update"
-                                        },
-                                        when (appLanguage) {
-                                            AppLanguage.RU -> "Релиз режима Переводной дурак, Добавление Переводного дурака в Мультиплеер, добавление в игру музыки и звуков, Полноценный выход Итальянского языка, начало Бета тестирования Украинского языка"
-                                            AppLanguage.UA -> "Реліз режиму Перекладний дурак, додавання Перекладного дурака в Мультиплеєр, додавання в гру музики та звуків, Повноцінний вихід Італійської мови, початок Бета тестування Української мови"
-                                            AppLanguage.IT -> "Rilascio della modalità Durak del Trasferimento, aggiunta del Durak del Trasferimento al Multiplayer, integrazione di musica ed effetti sonori, rilascio completo della localizzazione italiana e inizio del beta testing ucraino."
-                                            else -> "Release of Transfer Durak mode, addition of Transfer Durak to Multiplayer, integration of music and sound effects, full release of the Italian localization, and start of Ukrainian beta testing."
-                                        },
-                                        Icons.Default.VolumeUp
-                                    ),
-                                    Triple(
-                                        when (appLanguage) {
-                                            AppLanguage.RU -> "Июнь"
-                                            AppLanguage.UA -> "Червень"
-                                            AppLanguage.IT -> "Giugno"
-                                            else -> "June"
-                                        },
-                                        when (appLanguage) {
-                                            AppLanguage.RU -> "Тестовые версии(0.3.x, 0.4.x, 0.5.x)"
-                                            AppLanguage.UA -> "Тестові версії(0.3.x, 0.4.x, 0.5.x)"
-                                            AppLanguage.IT -> "Versioni di test(0.3.x, 0.4.x, 0.5.x)"
-                                            else -> "Testing versions(0.3.x, 0.4.x, 0.5.x)"
-                                        },
-                                        Icons.Default.BugReport
-                                    ),
-                                    Triple(
-                                        when (appLanguage) {
-                                            AppLanguage.RU -> "Июль"
-                                            AppLanguage.UA -> "Липень"
-                                            AppLanguage.IT -> "Luglio"
-                                            else -> "July"
-                                        },
-                                        when (appLanguage) {
-                                            AppLanguage.RU -> "Обновление интерфейса(0.6.x, 0.7.x)"
-                                            AppLanguage.UA -> "Оновлення інтерфейсу(0.6.x, 0.7.x)"
-                                            AppLanguage.IT -> "Aggiornamento dell'interfaccia(0.6.x, 0.7.x)"
-                                            else -> "Interface design overhaul(0.6.x, 0.7.x)"
-                                        },
-                                        Icons.Default.Palette
-                                    ),
-                                    Triple(
-                                        when (appLanguage) {
-                                            AppLanguage.RU -> "Август"
-                                            AppLanguage.UA -> "Серпень"
-                                            AppLanguage.IT -> "Agosto"
-                                            else -> "August"
-                                        },
-                                        when (appLanguage) {
-                                            AppLanguage.RU -> "Подготовка к релизу(0.8, 0.9.x)"
-                                            AppLanguage.UA -> "Підготовка до релізу(0.8, 0.9.x)"
-                                            AppLanguage.IT -> "Preparazione al rilascio(0.8, 0.9.x)"
-                                            else -> "Preparing for release(0.8, 0.9.x)"
-                                        },
-                                        Icons.Default.RocketLaunch
-                                    ),
-                                    Triple(
-                                        when (appLanguage) {
-                                            AppLanguage.RU -> "Сентябрь"
-                                            AppLanguage.UA -> "Вересень"
-                                            AppLanguage.IT -> "Settembre"
-                                            else -> "September"
-                                        },
-                                        when (appLanguage) {
-                                            AppLanguage.RU -> "Релиз(1.0) 🎉"
-                                            AppLanguage.UA -> "Реліз(1.0) 🎉"
-                                            AppLanguage.IT -> "Rilascio ufficiale(1.0) 🎉"
-                                            else -> "Official Release(1.0) 🎉"
-                                        },
-                                        Icons.Default.Star
-                                    )
-                                )
-
-                                val activeMilestones = listOf(
-                                    Triple(
-                                        when (appLanguage) {
-                                            AppLanguage.RU -> "Июнь"
-                                            AppLanguage.UA -> "Червень"
-                                            AppLanguage.IT -> "Giugno"
-                                            else -> "June"
-                                        },
-                                        when (appLanguage) {
-                                            AppLanguage.RU -> "Версии, дорабатывающие базовую игру(0.3.x, 0.4.x, 0.5.x)"
-                                            AppLanguage.UA -> "Версії, що доопрацьовують базову гру(0.3.x, 0.4.x, 0.5.x)"
-                                            AppLanguage.IT -> "Versioni che perfezionano il gioco base(0.3.x, 0.4.x, 0.5.x)"
-                                            else -> "Versions refactoring & polishing the base game(0.3.x, 0.4.x, 0.5.x)"
-                                        },
-                                        Icons.Default.BugReport
-                                    ),
-                                    Triple(
-                                        when (appLanguage) {
-                                             AppLanguage.RU -> "0.3 - Многопользовательское обновление 📶"
-                                             AppLanguage.UA -> "0.3 - Багатокористувацьке оновлення 📶"
-                                             AppLanguage.IT -> "0.3 - Aggiornamento multigiocatore 📶"
-                                             else -> "0.3 - Multiplayer Update 📶"
-                                        },
-                                        when (appLanguage) {
-                                             AppLanguage.RU -> "В этом обновлении будет наконец-то доступна игра до 6 человек, быстрый чат во время игры, улучшение меню лобби."
-                                             AppLanguage.UA -> "У цьому оновленні нарешті буде доступна гра до 6 осіб, швидкий чат під час гри, покращення меню лобі."
-                                             AppLanguage.IT -> "Questo aggiornamento porterà finalmente il gioco fino a 6 giocatori, la chat rapida durante la partita e miglioramenti al menu della lobby."
-                                             else -> "This update will finally bring play up to 6 players, quick chat during the game, and lobby menu improvements."
-                                        },
-                                        Icons.Default.Wifi
-                                    ),
-                                    Triple(
-                                        when (appLanguage) {
-                                            AppLanguage.RU -> "Июль"
-                                            AppLanguage.UA -> "Липень"
-                                            AppLanguage.IT -> "Luglio"
-                                            else -> "July"
-                                        },
-                                        when (appLanguage) {
-                                            AppLanguage.RU -> "Обновление интерфейса(0.6.x, 0.7.x)"
-                                            AppLanguage.UA -> "Оновлення інтерфейсу(0.6.x, 0.7.x)"
-                                            AppLanguage.IT -> "Aggiornamento dell'interfaccia(0.6.x, 0.7.x)"
-                                            else -> "Interface design overhaul(0.6.x, 0.7.x)"
-                                        },
-                                        Icons.Default.Palette
-                                    ),
-                                    Triple(
-                                        when (appLanguage) {
-                                            AppLanguage.RU -> "Август"
-                                            AppLanguage.UA -> "Серпень"
-                                            AppLanguage.IT -> "Agosto"
-                                            else -> "August"
-                                        },
-                                        when (appLanguage) {
-                                            AppLanguage.RU -> "Подготовка к релизу(0.8, 0.9.x)"
-                                            AppLanguage.UA -> "Підготовка до релізу(0.8, 0.9.x)"
-                                            AppLanguage.IT -> "Preparazione al rilascio(0.8, 0.9.x)"
-                                            else -> "Preparing for release(0.8, 0.9.x)"
-                                        },
-                                        Icons.Default.RocketLaunch
-                                    ),
-                                    Triple(
-                                        when (appLanguage) {
-                                            AppLanguage.RU -> "Сентябрь"
-                                            AppLanguage.UA -> "Вересень"
-                                            AppLanguage.IT -> "Settembre"
-                                            else -> "September"
-                                         },
-                                         when (appLanguage) {
-                                             AppLanguage.RU -> "Релиз(1.0) 🎉"
-                                             AppLanguage.UA -> "Реліз(1.0) 🎉"
-                                             AppLanguage.IT -> "Rilascio ufficiale(1.0) 🎉"
-                                             else -> "Official Release(1.0) 🎉"
-                                         },
-                                         Icons.Default.Star
-                                     )
-                                 )
- 
-                                 activeMilestones.forEach { (month, task, icon) ->
-                                    Card(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        colors = CardDefaults.cardColors(
-                                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                                        ),
-                                        shape = RoundedCornerShape(16.dp)
-                                    ) {
-                                        Row(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(16.dp),
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(14.dp)
-                                        ) {
-                                            Box(
-                                                modifier = Modifier
-                                                    .size(40.dp)
-                                                    .background(
-                                                        MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
-                                                        CircleShape
-                                                    ),
-                                                contentAlignment = Alignment.Center
-                                            ) {
-                                                Icon(
-                                                    imageVector = icon,
-                                                    contentDescription = null,
-                                                    tint = MaterialTheme.colorScheme.primary,
-                                                    modifier = Modifier.size(20.dp)
-                                                )
-                                            }
-
-                                            Column(modifier = Modifier.weight(1f)) {
-                                                Text(
-                                                    text = month,
-                                                    fontWeight = FontWeight.Bold,
-                                                    fontSize = 16.sp,
-                                                    color = MaterialTheme.colorScheme.onSurface
-                                                )
-                                                Spacer(modifier = Modifier.height(2.dp))
-                                                Text(
-                                                    text = task,
-                                                    fontSize = 13.sp,
-                                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                    lineHeight = 18.sp
-                                                )
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        },
+                        title = { Text("Roadmap") },
+                        text = { RoadmapNotice(appLanguage) },
                         confirmButton = {
                             TextButton(onClick = { showRoadmapDialog = false }) {
-                                Text(
-                                    text = when (viewModel.appLanguage.value) {
-                                        AppLanguage.RU -> "Закрыть"
-                                        AppLanguage.UA -> "Закрити"
-                                        AppLanguage.IT -> "Chiudi"
-                                        else -> "Close"
-                                    },
-                                    fontWeight = FontWeight.Bold
-                                )
+                                Text(viewModel.getString("BACK"))
                             }
-                        },
-                        shape = RoundedCornerShape(28.dp),
-                        containerColor = MaterialTheme.colorScheme.surface
+                        }
                     )
                 }
             }
@@ -2236,7 +1976,7 @@ fun GameTableScreen(viewModel: DurakViewModel) {
     val offlineSubMode by viewModel.offlineSubMode.collectAsStateWithLifecycle()
     val activeMode by viewModel.activeMode.collectAsStateWithLifecycle()
     val isTransferEnabled = snapshot.isTransferMode
-    val canPlayerTransferNow = isTransferEnabled && 
+    val canPlayerTransferNow = isTransferEnabled && !snapshot.isDefenderTaking && snapshot.tablePairs.size < 6 &&
             snapshot.tablePairs.isNotEmpty() && 
             snapshot.tablePairs.all { it.defenseCard == null } &&
             (if (activeMode == GameMode.OFFLINE) snapshot.attackerPlayerId == "opponent"
@@ -2253,7 +1993,8 @@ fun GameTableScreen(viewModel: DurakViewModel) {
     var dragOffsetY by remember { mutableStateOf(0f) }
 
     LaunchedEffect(snapshot.tablePairs) {
-        tableCardBounds.clear()
+        val activeIds = snapshot.tablePairs.map { it.attackCard.id }.toSet()
+        tableCardBounds.keys.retainAll(activeIds)
     }
 
     val animatedDragOffsetX by animateFloatAsState(
@@ -2326,7 +2067,7 @@ fun GameTableScreen(viewModel: DurakViewModel) {
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                    Row(modifier = Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
                         // Profile Circle using Clean Minimalism layout
                         Box(
                             modifier = Modifier
@@ -2345,14 +2086,19 @@ fun GameTableScreen(viewModel: DurakViewModel) {
                         Spacer(modifier = Modifier.width(12.dp))
                         Column {
                             Text(
-                                text = snapshot.opponentName,
+                                text = if (activeMode == GameMode.OFFLINE) snapshot.opponentName
+                                    else if (appLanguage == AppLanguage.RU) "Стол · ${snapshot.opponents.size + 1} игроков"
+                                    else "Table · ${snapshot.opponents.size + 1} players",
+                                maxLines = 1,
+                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                                 color = Color.White,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 14.sp
                             )
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(
-                                    text = "${snapshot.opponentHandSize} Cards",
+                                    text = if (activeMode == GameMode.OFFLINE) "${snapshot.opponentHandSize} Cards"
+                                        else if (snapshot.isTransferMode) "Переводной / Transfer" else "Классический / Classic",
                                     color = Color(0xFF909094),
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Medium
@@ -2407,37 +2153,13 @@ fun GameTableScreen(viewModel: DurakViewModel) {
                     }
                 }
 
-                // 2. MIDDLE TOP: every remote player and their private hand size.
+                // Every seat remains visible; no hidden third-to-sixth players in a scrolling strip.
                 if (snapshot.opponents.isNotEmpty()) {
-                    LazyRow(
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        contentPadding = PaddingValues(horizontal = 4.dp)
-                    ) {
-                        items(snapshot.opponents, key = { it.id }) { player ->
-                            val role = when {
-                                player.isDefender -> if (appLanguage == AppLanguage.RU) "защита" else "defending"
-                                player.isAttacker -> if (appLanguage == AppLanguage.RU) "атака" else "attacking"
-                                else -> if (appLanguage == AppLanguage.RU) "ожидает" else "waiting"
-                            }
-                            Column(
-                                modifier = Modifier
-                                    .widthIn(min = 104.dp)
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(Color.White.copy(alpha = 0.08f))
-                                    .border(
-                                        1.dp,
-                                        if (player.id == snapshot.currentPlayerId) Color(0xFFD1E4FF) else Color.White.copy(alpha = 0.12f),
-                                        RoundedCornerShape(12.dp)
-                                    )
-                                    .padding(horizontal = 10.dp, vertical = 7.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                Text(player.name, color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold, maxLines = 1)
-                                Text("${player.handSize} • $role", color = Color(0xFFB7BDC5), fontSize = 9.sp, maxLines = 1)
-                            }
-                        }
-                    }
+                    MultiplayerRoster(
+                        snapshot = snapshot,
+                        localName = viewModel.playerNickname.collectAsStateWithLifecycle().value,
+                        language = appLanguage
+                    )
                 } else Row(
                     horizontalArrangement = Arrangement.Center,
                     modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
@@ -2519,7 +2241,7 @@ fun GameTableScreen(viewModel: DurakViewModel) {
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Column(
-                                modifier = Modifier.weight(1f),
+                                modifier = Modifier.weight(1f).fillMaxHeight().verticalScroll(rememberScrollState()),
                                 verticalArrangement = Arrangement.spacedBy(8.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
@@ -2832,7 +2554,9 @@ fun GameTableScreen(viewModel: DurakViewModel) {
                 }
                 // Turn Status Text inside Footer
                 Text(
-                    text = if (snapshot.isDefenderTaking) {
+                    text = if (activeMode != GameMode.OFFLINE) {
+                        multiplayerTurnText(snapshot, appLanguage)
+                    } else if (snapshot.isDefenderTaking) {
                         if (snapshot.isLocalTurn) {
                             when (appLanguage) {
                                 AppLanguage.RU -> "СОПЕРНИК БЕРЕТ КАРТЫ (ДОКИНУТЬ)"
@@ -2968,7 +2692,7 @@ fun GameTableScreen(viewModel: DurakViewModel) {
                                             }
                                         }
                                     }
-                                    .pointerInput(card.id) {
+                                    .pointerInput(card.id, snapshot.isLocalTurn, canPlayerTransferNow, snapshot.tablePairs) {
                                         detectDragGestures(
                                             onDragStart = { offset ->
                                                 localDragOffsetX = 0f

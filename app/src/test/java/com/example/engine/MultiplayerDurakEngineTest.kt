@@ -50,7 +50,7 @@ class MultiplayerDurakEngineTest {
         assertTrue(state.players.all { it.handSize == 6 })
     }
 
-    @Test fun `taking collects the table and keeps attacker for next round`() {
+    @Test fun `taking skips the defender and gives attack to the following player`() {
         val engine = MultiplayerDurakEngine(SeededRandom())
         engine.start((1..3).map { MultiplayerDurakEngine.Seat("p$it", "P$it") })
         val initial = engine.snapshotFor("p1")
@@ -61,7 +61,8 @@ class MultiplayerDurakEngineTest {
         assertTrue(engine.bito(attacker))
         val next = engine.snapshotFor(defender)
         assertTrue(next.table.isEmpty())
-        assertEquals(attacker, next.players.single { it.isAttacker }.id)
+        val defenderIndex = initial.players.indexOfFirst { it.id == defender }
+        assertEquals(initial.players[(defenderIndex + 1) % 3].id, next.players.single { it.isAttacker }.id)
         assertTrue(next.players.single { it.id == defender }.handSize >= 7)
     }
 

@@ -20,13 +20,15 @@ class MultiplayerGameProtocolTest {
             table = listOf(CardPair(Card(Suit.CLUBS, Rank.SIX), Card(Suit.CLUBS, Rank.SEVEN))),
             trumpCard = Card(Suit.DIAMONDS, Rank.KING), trumpSuit = Suit.DIAMONDS,
             deckSize = 12, discardSize = 8, currentPlayerId = "peer~1", defenderId = "peer~2",
-            taking = false, finished = false, transferMode = true, loserId = null
+            taking = false, finished = false, transferMode = true, loserId = null,
+            attackPlayerIds = listOf("peer~3", "peer;4")
         )
         val decoded = MultiplayerGameProtocol.parseState(MultiplayerGameProtocol.state(source))!!
         assertEquals(source.localHand, decoded.hand)
         assertEquals(source.players, decoded.players)
         assertEquals(source.table, decoded.table)
         assertTrue(decoded.transferMode)
+        assertEquals(source.attackPlayerIds, decoded.attackPlayerIds)
     }
 
     @Test fun `all multiplayer actions round trip`() {

@@ -54,12 +54,16 @@ class MultiplayerRegressionTest {
                 val extra = hand.first { it.rank == card.rank }
                 assertTrue(game.attack(attacker, card))
                 assertTrue(game.take(state.defenderId))
+                assertFalse(game.attack(helper, extra))
+                assertFalse(game.bito(helper))
+                assertTrue(game.bito(attacker))
                 val view = MultiplayerGameProtocol.parseState(MultiplayerGameProtocol.state(game.snapshotFor(helper)))!!.toGameSnapshot(helper)
                 assertTrue("Helper must see throw-in availability", view.isLocalTurn)
                 assertTrue(game.attack(helper, extra))
-                assertFalse("Only lead attacker may finish", game.bito(helper))
+                assertTrue("Helper must be able to confirm after lead", view.canBito)
                 assertFalse(game.bito("unknown"))
-                assertTrue(game.bito(attacker))
+                assertTrue("A real helper throw requires lead reconfirmation", game.bito(attacker))
+                assertTrue(game.bito(helper))
                 verified = true
                 break
             }
@@ -76,6 +80,9 @@ class MultiplayerRegressionTest {
             game.attack(attacker, game.snapshotFor(attacker).localHand.first())
             game.take(before.defenderId)
             assertTrue(game.bito(attacker))
+            while (game.snapshotFor(attacker).table.isNotEmpty()) {
+                assertTrue(game.bito(game.snapshotFor(attacker).attackPlayerIds.first()))
+            }
             assertEquals(before.players[(defenderIndex + 1) % count].id, game.snapshotFor(attacker).currentPlayerId)
         }
     }
@@ -84,6 +91,7 @@ class MultiplayerRegressionTest {
         for (count in 2..6) for (size in listOf(36, 52)) for (transfer in listOf(false, true)) for (seed in 1L..5L) {
             val game = engine(count, seed, transfer, size)
             var steps = 0
+            val policy = java.util.Random(seed)
             while (!game.snapshotFor("p0").finished && steps++ < 6000) {
                 val state = game.snapshotFor("p0")
                 val attacker = state.players.single { it.isAttacker }.id
@@ -100,9 +108,11 @@ class MultiplayerRegressionTest {
                     assertEquals(seat.handSize, view.localHand.size)
                     assertEquals(state.currentPlayerId, view.currentPlayerId)
                     assertEquals(state.defenderId, view.defenderPlayerId)
-                    if (view.canBito) assertEquals(attacker, seat.id)
+                    if (view.canBito) assertTrue(seat.id in state.attackPlayerIds)
                 }
-                fun lowest(id: String) = game.snapshotFor(id).localHand.sortedBy { it.rank.value + if (it.suit == state.trumpSuit) 20 else 0 }
+                // Vary legal choices deterministically: a fixed greedy policy can cycle
+                // forever by returning the same cards between the final two players.
+                fun lowest(id: String) = game.snapshotFor(id).localHand.shuffled(policy)
                 if (state.table.isEmpty()) {
                     assertTrue(game.attack(attacker, lowest(attacker).first()))
                 } else if (!state.taking && state.table.any { it.defenseCard == null }) {
@@ -116,7 +126,7 @@ class MultiplayerRegressionTest {
                     val added = state.players.filter { it.id != defender }.any { seat ->
                         lowest(seat.id).any { game.attack(seat.id, it) }
                     }
-                    if (!added) assertTrue(game.bito(attacker))
+                    if (!added) assertTrue(game.bito(state.attackPlayerIds.first()))
                 }
             }
             assertTrue("Game must finish: players=$count deck=$size transfer=$transfer seed=$seed", game.snapshotFor("p0").finished)

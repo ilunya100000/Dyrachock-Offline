@@ -14,8 +14,8 @@ android {
     applicationId = "com.aistudio.durak.kgworp"
     minSdk = 24
     targetSdk = 36
-    versionCode = 4
-    versionName = "0.3.1"
+    versionCode = 5
+    versionName = "0.3.1_01"
     manifestPlaceholders["appLabel"] = "@string/app_name"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"

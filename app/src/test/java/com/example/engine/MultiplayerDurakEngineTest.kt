@@ -24,7 +24,7 @@ class MultiplayerDurakEngineTest {
         assertEquals(6, snapshot.players.single { it.id == "c" }.handSize)
     }
 
-    @Test fun `defender cannot attack and other player can add matching rank`() {
+    @Test fun `defender and helper cannot attack before lead passes`() {
         val engine = MultiplayerDurakEngine(SeededRandom())
         engine.start(listOf(
             MultiplayerDurakEngine.Seat("a", "A"),
@@ -38,7 +38,7 @@ class MultiplayerDurakEngineTest {
         assertFalse(engine.attack(defender, engine.snapshotFor(defender).localHand.first()))
         val helper = engine.snapshotFor(attacker).players.first { it.id != attacker && it.id != defender }.id
         val matching = engine.snapshotFor(helper).localHand.firstOrNull { it.rank == first.rank }
-        if (matching != null) assertTrue(engine.attack(helper, matching))
+        if (matching != null) assertFalse(engine.attack(helper, matching))
     }
 
     @Test fun `six players are dealt six cards from a 36 card deck`() {
@@ -59,6 +59,9 @@ class MultiplayerDurakEngineTest {
         assertTrue(engine.attack(attacker, engine.snapshotFor(attacker).localHand.first()))
         assertTrue(engine.take(defender))
         assertTrue(engine.bito(attacker))
+        val helper = initial.players.single { it.id != attacker && it.id != defender }.id
+        assertFalse(engine.snapshotFor(helper).table.isEmpty())
+        assertTrue(engine.bito(helper))
         val next = engine.snapshotFor(defender)
         assertTrue(next.table.isEmpty())
         val defenderIndex = initial.players.indexOfFirst { it.id == defender }

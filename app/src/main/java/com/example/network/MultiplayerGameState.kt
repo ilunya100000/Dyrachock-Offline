@@ -19,7 +19,8 @@ fun MultiplayerGameProtocol.State.toGameSnapshot(localId: String): GameStateSnap
         loserId == localId -> MatchStatus.LOST
         else -> MatchStatus.WON
     }
-    val canAttack = !localIsDefender && hand.isNotEmpty() && table.size < 6 &&
+    val eligibleAttacker = attackPlayerIds?.contains(localId) ?: (localId == attacker.id)
+    val canAttack = eligibleAttacker && !localIsDefender && hand.isNotEmpty() && table.size < 6 &&
         (table.isNotEmpty() || attacker.id == localId) &&
         table.size < (players.single { it.id == defenderId }.handSize + table.count { it.defenseCard != null }) &&
         (table.isEmpty() || hand.any { card -> table.any { it.attackCard.rank == card.rank || it.defenseCard?.rank == card.rank } })
@@ -30,7 +31,7 @@ fun MultiplayerGameProtocol.State.toGameSnapshot(localId: String): GameStateSnap
         localHand = hand, opponentHandSize = primary.handSize, opponentName = primary.nickname,
         matchStatus = status, attackerPlayerId = attacker.id,
         canTake = !finished && localIsDefender && hasUndefended && !taking,
-        canBito = !finished && localId == attacker.id && table.isNotEmpty() && (taking || !hasUndefended),
+        canBito = !finished && eligibleAttacker && !localIsDefender && table.isNotEmpty() && (taking || !hasUndefended),
         isTransferMode = transferMode, isDefenderTaking = taking,
         localPlayerId = localId, currentPlayerId = currentPlayerId, defenderPlayerId = defenderId,
         opponents = others.map { RemotePlayerSnapshot(it.id, it.nickname, it.handSize, it.isAttacker, it.isDefender) }

@@ -27,7 +27,8 @@ class MultiplayerDurakEngine(private val random: SecureRandom = SecureRandom()) 
         val taking: Boolean,
         val finished: Boolean,
         val transferMode: Boolean,
-        val loserId: String?
+        val loserId: String?,
+        val attackPlayerIds: List<String> = players.filter { it.isAttacker }.map { it.id }
     )
 
     private val hands = linkedMapOf<String, MutableList<Card>>()
@@ -35,6 +36,9 @@ class MultiplayerDurakEngine(private val random: SecureRandom = SecureRandom()) 
     private val deck = mutableListOf<Card>()
     private val table = mutableListOf<CardPair>()
     private val attackOwners = mutableListOf<String>()
+    private val roundAttackers = linkedSetOf<String>()
+    private val passedAttackers = mutableSetOf<String>()
+    private var leadPassed = false
     private var attackerIndex = 0
     private var defenderIndex = 1
     private var transferredThisRound = false
@@ -56,6 +60,9 @@ class MultiplayerDurakEngine(private val random: SecureRandom = SecureRandom()) 
         deck.clear()
         table.clear()
         attackOwners.clear()
+        roundAttackers.clear()
+        passedAttackers.clear()
+        leadPassed = false
         discardSize = 0
         taking = false
         transferredThisRound = false
@@ -83,12 +90,19 @@ class MultiplayerDurakEngine(private val random: SecureRandom = SecureRandom()) 
         if (finished || playerId == defenderId || !isAttackTurn(playerId)) return false
         val hand = hands[playerId] ?: return false
         if (!hand.contains(card) || table.size >= 6) return false
-        if (table.isEmpty()) defenderStartHandSize = hands[defenderId]?.size ?: 0
+        if (table.isEmpty()) {
+            defenderStartHandSize = hands[defenderId]?.size ?: 0
+            roundAttackers.clear()
+            seats.filter { hands[it.id].orEmpty().isNotEmpty() }.forEach { roundAttackers += it.id }
+        }
         if (table.size >= defenderStartHandSize) return false
         if (table.isNotEmpty() && table.none { it.attackCard.rank == card.rank || it.defenseCard?.rank == card.rank }) return false
         hand.remove(card)
         table += CardPair(card)
         attackOwners += playerId
+        // A helper's new card invalidates the lead's confirmation, but keeps
+        // the throw-in phase open. Passing without adding cards does not.
+        if (leadPassed && playerId != attackerId) passedAttackers.remove(attackerId)
         return true
     }
 
@@ -137,10 +151,13 @@ class MultiplayerDurakEngine(private val random: SecureRandom = SecureRandom()) 
         return true
     }
 
-    /** The lead attacker closes the round; helpers cannot close it for them. */
+    /** Lead attacker passes first; the remaining attackers each throw in or pass. */
     fun bito(playerId: String): Boolean {
-        if (finished || playerId != attackerId || table.isEmpty()) return false
+        if (finished || playerId !in attackPlayerIds || table.isEmpty()) return false
         if (!taking && table.any { it.defenseCard == null }) return false
+        passedAttackers += playerId
+        if (playerId == attackerId) leadPassed = true
+        if (attackPlayerIds.isNotEmpty()) return true
         val defenderWasTaking = taking
         val oldDefender = defenderIndex
         if (defenderWasTaking) {
@@ -151,6 +168,9 @@ class MultiplayerDurakEngine(private val random: SecureRandom = SecureRandom()) 
         }
         table.clear()
         attackOwners.clear()
+        roundAttackers.clear()
+        passedAttackers.clear()
+        leadPassed = false
         refillHands()
         val preferredAttacker = if (defenderWasTaking) nextActiveIndex(oldDefender) else oldDefender
         attackerIndex = if (hands[seats[preferredAttacker].id].orEmpty().isNotEmpty() || deck.isNotEmpty()) {
@@ -171,17 +191,21 @@ class MultiplayerDurakEngine(private val random: SecureRandom = SecureRandom()) 
             table = table.toList(), trumpCard = trumpCard, trumpSuit = trumpSuit,
             deckSize = deck.size, discardSize = discardSize,
             currentPlayerId = currentPlayerId, defenderId = defenderId,
-            taking = taking, finished = finished, transferMode = transferMode, loserId = loserId
+            taking = taking, finished = finished, transferMode = transferMode, loserId = loserId,
+            attackPlayerIds = attackPlayerIds
         )
     }
 
     private val attackerId get() = seats[attackerIndex].id
     private val defenderId get() = seats[defenderIndex].id
-    private val currentPlayerId get() = if (!taking && table.any { it.defenseCard == null }) defenderId else attackerId
+    private val currentPlayerId get() = if (!taking && table.any { it.defenseCard == null }) defenderId else attackPlayerIds.firstOrNull() ?: attackerId
 
-    private fun isAttackTurn(playerId: String) = table.isEmpty().let { empty ->
-        if (empty) playerId == attackerId else seats.any { it.id == playerId && it.id != defenderId }
+    private val attackPlayerIds: List<String> get() = if (!leadPassed) listOf(attackerId) else {
+        seats.indices.map { seats[(attackerIndex + it) % seats.size].id }
+            .filter { it != defenderId && it in roundAttackers && it !in passedAttackers }
     }
+
+    private fun isAttackTurn(playerId: String) = playerId in attackPlayerIds
 
     private fun nextActiveIndex(from: Int): Int {
         var index = from

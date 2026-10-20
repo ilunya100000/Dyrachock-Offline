@@ -11,6 +11,7 @@ import androidx.test.platform.app.InstrumentationRegistry
 import com.example.model.MatchStatus
 import com.example.network.MultiplayerGameProtocol
 import com.example.network.MultiplayerManager
+import com.example.network.toGameSnapshot
 import com.example.ui.GameTableScreen
 import com.example.ui.theme.MyApplicationTheme
 import com.example.viewmodel.DurakViewModel
@@ -81,6 +82,81 @@ class MultiplayerTableFlowTest {
             val image = compose.onRoot().captureToImage().asAndroidBitmap()
             val destination = File(app.getExternalFilesDir(null), "six-player-full-table.png")
             destination.outputStream().use { image.compress(Bitmap.CompressFormat.PNG, 100, it) }
+        } finally {
+            clients.forEach { it.stopAll() }
+            scope.cancel()
+            compose.runOnUiThread { store.clear() }
+        }
+    }
+
+    @Test fun threePlayersConfirmBitoAfterLeadBeforeRoundCloses() {
+        val app = InstrumentationRegistry.getInstrumentation().targetContext.applicationContext as Application
+        val store = ViewModelStore()
+        lateinit var model: DurakViewModel
+        val clients = List(2) { MultiplayerManager(app) }
+        val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+        val states = ConcurrentHashMap<Int, MultiplayerGameProtocol.State>()
+        try {
+            compose.runOnUiThread { model = DurakViewModel(app); store.put("bito", model) }
+            compose.setContent { MyApplicationTheme { GameTableScreen(model) } }
+            compose.waitUntil(10000) { model.currentScreen.value == DurakViewModel.Screen.MAIN_MENU }
+            compose.runOnIdle {
+                model.setPlayerNickname("Player1")
+                model.setMpLobbyPlayersCount(3)
+                model.startHostingLobby()
+            }
+            clients.forEachIndexed { index, client ->
+                scope.launch(start = CoroutineStart.UNDISPATCHED) {
+                    client.incomingMessages.collect { message ->
+                        MultiplayerGameProtocol.parseState(message.payload)?.let { states[index] = it }
+                    }
+                }
+                runBlocking {
+                    withTimeout(15000) {
+                        do {
+                            client.connectToHost("127.0.0.1", nickname = "Player${index + 2}")
+                            while (client.connectionState.value == MultiplayerManager.State.CONNECTING) delay(20)
+                        } while (client.connectionState.value != MultiplayerManager.State.CONNECTED)
+                    }
+                }
+            }
+            compose.waitUntil(15000) {
+                model.multiplayerLobby.value?.players?.size == 3 && clients.withIndex().all { (index, client) ->
+                    model.multiplayerLobby.value?.players?.any { it.id == client.localPlayerId.value && it.nickname == "Player${index + 2}" } == true
+                }
+            }
+            compose.runOnIdle { assertTrue(model.startHostedMatch()) }
+            compose.waitUntil(10000) { states.size == 2 && model.gameState.value.opponents.size == 2 }
+            val before = model.gameState.value
+            val lead = before.attackerPlayerId
+            val defender = before.defenderPlayerId
+            val helper = (listOf("host") + clients.map { it.localPlayerId.value!! }).single { it != lead && it != defender }
+            fun send(id: String, action: String, hostAction: () -> Unit) {
+                if (id == "host") compose.runOnIdle(hostAction)
+                else clients.single { it.localPlayerId.value == id }.sendMessage(action)
+            }
+            fun state(id: String) = if (id == "host") model.gameState.value else {
+                val index = clients.indexOfFirst { it.localPlayerId.value == id }
+                states.getValue(index).toGameSnapshot(id)
+            }
+            val first = state(lead).localHand.first()
+            send(lead, MultiplayerGameProtocol.attack(first)) { model.playCard(first) }
+            compose.waitUntil(10000) { model.gameState.value.tablePairs.size == 1 && states.values.all { it.table.size == 1 } }
+            send(defender, MultiplayerGameProtocol.take()) { model.pressTakeAll() }
+            compose.waitUntil(10000) { model.gameState.value.isDefenderTaking && states.values.all { it.taking } }
+            assertTrue(state(lead).canBito)
+            assertFalse(state(helper).canBito)
+            if (lead == "host") compose.onNodeWithTag("bito_button").assertIsDisplayed()
+            else compose.onNodeWithTag("bito_button").assertDoesNotExist()
+            send(lead, MultiplayerGameProtocol.bito()) { model.pressBito() }
+            compose.waitUntil(10000) { state(helper).canBito && !state(lead).canBito }
+            assertEquals(1, model.gameState.value.tablePairs.size)
+            if (helper == "host") compose.onNodeWithTag("bito_button").assertIsDisplayed()
+            else compose.onNodeWithTag("bito_button").assertDoesNotExist()
+            send(helper, MultiplayerGameProtocol.bito()) { model.pressBito() }
+            compose.waitUntil(10000) { model.gameState.value.tablePairs.isEmpty() && states.values.all { it.table.isEmpty() } }
+            assertFalse(model.gameState.value.isDefenderTaking)
+            assertFalse(state(helper).canBito)
         } finally {
             clients.forEach { it.stopAll() }
             scope.cancel()

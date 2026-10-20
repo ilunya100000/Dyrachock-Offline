@@ -80,6 +80,8 @@ fun multiplayerTurnText(snapshot: GameStateSnapshot, language: AppLanguage): Str
     return when {
         snapshot.isDefenderTaking && snapshot.defenderPlayerId == snapshot.localPlayerId ->
             if (russian) "ВЫ БЕРЁТЕ · ОЖИДАЙТЕ ЗАВЕРШЕНИЯ" else "YOU ARE TAKING · WAIT FOR ROUND END"
+        snapshot.isDefenderTaking && !snapshot.canBito && !snapshot.isLocalTurn ->
+            if (russian) "$defenderName БЕРЁТ · ОЖИДАЙТЕ ПОДКИДЫВАЮЩИХ" else "$defenderName IS TAKING · WAIT FOR ATTACKERS"
         snapshot.isDefenderTaking ->
             if (russian) "$defenderName БЕРЁТ · ${if (snapshot.canBito) "ЗАВЕРШИТЕ ХОД" else "ДОБРОС"}"
             else "$defenderName IS TAKING · ${if (snapshot.canBito) "FINISH ROUND" else "THROW-IN"}"

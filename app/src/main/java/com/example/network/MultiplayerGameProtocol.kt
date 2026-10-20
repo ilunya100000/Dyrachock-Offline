@@ -25,20 +25,21 @@ object MultiplayerGameProtocol {
         snapshot.trumpSuit.name,
         snapshot.deckSize.toString(), snapshot.discardSize.toString(),
         snapshot.currentPlayerId, snapshot.defenderId,
-        snapshot.taking.toString(), snapshot.finished.toString(), snapshot.transferMode.toString(), snapshot.loserId.orEmpty()
+        snapshot.taking.toString(), snapshot.finished.toString(), snapshot.transferMode.toString(), snapshot.loserId.orEmpty(), snapshot.attackPlayerIds.joinToString(";") { encode(it) }
     ).joinToString("|") { encode(it) }
 
     fun parseState(raw: String): State? {
         if (!raw.startsWith(STATE)) return null
         val f = raw.removePrefix(STATE).split("|")
-        if (f.size != 13) return null
+        if (f.size !in 13..14) return null
         return runCatching {
             State(
                 hand = parseCards(decode(f[0])), players = parsePlayers(decode(f[1])), table = parseTable(decode(f[2])),
                 trumpCard = NetworkProtocol.decodeCard(decode(f[3])),
                 trumpSuit = Suit.valueOf(decode(f[4])), deckSize = decode(f[5]).toInt(), discardSize = decode(f[6]).toInt(),
                 currentPlayerId = decode(f[7]), defenderId = decode(f[8]), taking = decode(f[9]).toBoolean(), finished = decode(f[10]).toBoolean(),
-                transferMode = decode(f[11]).toBoolean(), loserId = decode(f[12]).ifBlank { null }
+                transferMode = decode(f[11]).toBoolean(), loserId = decode(f[12]).ifBlank { null },
+                attackPlayerIds = f.getOrNull(13)?.let { field -> decode(field).split(";").filter { it.isNotEmpty() }.map { decode(it) } }
             )
         }.getOrNull()
     }
@@ -72,7 +73,7 @@ object MultiplayerGameProtocol {
         else -> null
     }
 
-    data class State(val hand: List<Card>, val players: List<MultiplayerDurakEngine.PlayerView>, val table: List<CardPair>, val trumpCard: Card?, val trumpSuit: Suit, val deckSize: Int, val discardSize: Int, val currentPlayerId: String, val defenderId: String, val taking: Boolean, val finished: Boolean, val transferMode: Boolean, val loserId: String?)
+    data class State(val hand: List<Card>, val players: List<MultiplayerDurakEngine.PlayerView>, val table: List<CardPair>, val trumpCard: Card?, val trumpSuit: Suit, val deckSize: Int, val discardSize: Int, val currentPlayerId: String, val defenderId: String, val taking: Boolean, val finished: Boolean, val transferMode: Boolean, val loserId: String?, val attackPlayerIds: List<String>? = null)
 
     private fun cards(cards: List<Card>) = cards.joinToString(";") { NetworkProtocol.encodeCard(it) }
     private fun parseCards(value: String) = value.split(";").filter { it.isNotBlank() }.mapNotNull(NetworkProtocol::decodeCard)

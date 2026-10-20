@@ -34,6 +34,7 @@ fun MultiplayerGameProtocol.State.toGameSnapshot(localId: String): GameStateSnap
         canBito = !finished && eligibleAttacker && !localIsDefender && table.isNotEmpty() && (taking || !hasUndefended),
         isTransferMode = transferMode, isDefenderTaking = taking,
         localPlayerId = localId, currentPlayerId = currentPlayerId, defenderPlayerId = defenderId,
+        passedPlayerIds = passedPlayerIds, roundAttackerIds = roundAttackerIds, withdrawnPlayerIds = withdrawnPlayerIds,
         opponents = others.map { RemotePlayerSnapshot(it.id, it.nickname, it.handSize, it.isAttacker, it.isDefender) }
     )
 }

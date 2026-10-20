@@ -1,5 +1,7 @@
 package com.example.ui
 
+import androidx.activity.compose.BackHandler
+
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
@@ -72,6 +74,13 @@ sealed interface TableFlowItem {
 fun DurakApp(viewModel: DurakViewModel) {
     val currentScreen by viewModel.currentScreen.collectAsStateWithLifecycle()
     val statsList by viewModel.gameHistory.collectAsStateWithLifecycle()
+    BackHandler(enabled = currentScreen != DurakViewModel.Screen.MAIN_MENU && currentScreen != DurakViewModel.Screen.SPLASH) {
+        when (currentScreen) {
+            DurakViewModel.Screen.GAME_TABLE -> viewModel.setExitConfirmDialogVisible(true)
+            DurakViewModel.Screen.CUSTOM_DECK -> viewModel.closeCustomDeck()
+            else -> viewModel.navigateTo(DurakViewModel.Screen.MAIN_MENU)
+        }
+    }
     
     val showExitConfirm by viewModel.showExitConfirmDialog.collectAsStateWithLifecycle()
     val showClearArchiveConfirm by viewModel.showClearArchiveConfirmDialog.collectAsStateWithLifecycle()
@@ -349,7 +358,7 @@ fun SplashScreen(viewModel: DurakViewModel) {
             )
 
             Text(
-                text = "Version 0.3.1_01",
+                text = "Version 0.3.2",
                 fontSize = 12.sp,
                 fontStyle = FontStyle.Italic,
                 color = Color(0xFF909094).copy(alpha = 0.8f),
@@ -688,6 +697,9 @@ fun MainMenuScreen(viewModel: DurakViewModel, statsList: List<GameStat>) {
                 }
             }
 
+            if (viewModel.canRestoreMultiplayer) TextButton(onClick = { viewModel.restoreMultiplayerConnection() }, modifier = Modifier.testTag("restore_room")) {
+                Text(mpText(appLanguage, "Вернуться в комнату", "Return to room", "Torna nella stanza", "Повернутися до кімнати"))
+            }
             Button(
                 onClick = { viewModel.navigateTo(DurakViewModel.Screen.MULTIPLAYER_HUB) },
                 modifier = Modifier
@@ -725,7 +737,7 @@ fun MainMenuScreen(viewModel: DurakViewModel, statsList: List<GameStat>) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "0.3.1_01",
+                    text = "0.3.2",
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f)
@@ -1283,9 +1295,8 @@ fun MultiplayerHubScreen(viewModel: DurakViewModel) {
     val appLanguage by viewModel.appLanguage.collectAsStateWithLifecycle()
     val lobby by viewModel.multiplayerLobby.collectAsStateWithLifecycle()
 
-    var activeTabHost by remember { mutableStateOf(true) }
+    var activeTabHost by remember { mutableStateOf(viewModel.activeMode.value != GameMode.ONLINE_CLIENT) }
     var inputIp by remember { mutableStateOf("") }
-    var chatDraft by remember { mutableStateOf("") }
 
     LaunchedEffect(activeTabHost) {
         if (!activeTabHost) viewModel.startSearchingHosts()
@@ -1338,7 +1349,7 @@ fun MultiplayerHubScreen(viewModel: DurakViewModel) {
                         .weight(1f)
                         .clip(RoundedCornerShape(20.dp))
                         .background(if (activeTabHost) MaterialTheme.colorScheme.surface else Color.Transparent)
-                        .clickable { activeTabHost = true }
+                        .clickable(enabled = lobby == null || viewModel.activeMode.value != GameMode.ONLINE_CLIENT) { activeTabHost = true }
                         .padding(vertical = 12.dp),
                     contentAlignment = Alignment.Center
                 ) {
@@ -1355,7 +1366,7 @@ fun MultiplayerHubScreen(viewModel: DurakViewModel) {
                         .weight(1f)
                         .clip(RoundedCornerShape(20.dp))
                         .background(if (!activeTabHost) MaterialTheme.colorScheme.surface else Color.Transparent)
-                        .clickable { activeTabHost = false }
+                        .clickable(enabled = lobby == null || viewModel.activeMode.value != GameMode.ONLINE_HOST) { activeTabHost = false }
                         .padding(vertical = 12.dp),
                     contentAlignment = Alignment.Center
                 ) {
@@ -1466,7 +1477,7 @@ fun MultiplayerHubScreen(viewModel: DurakViewModel) {
                         Spacer(modifier = Modifier.height(6.dp))
 
                         val mpSubMode by viewModel.mpLobbySubMode.collectAsStateWithLifecycle()
-                        val optionModeEnabled = networkState != MultiplayerManager.State.HOSTING
+                        val optionModeEnabled = lobby?.inMatch != true
 
                         Row(
                             modifier = Modifier
@@ -1529,7 +1540,7 @@ fun MultiplayerHubScreen(viewModel: DurakViewModel) {
                                 .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
                                 .padding(4.dp)
                         ) {
-                            val optionDeckEnabled = networkState != MultiplayerManager.State.HOSTING
+                            val optionDeckEnabled = lobby?.inMatch != true
                             listOf(
                                 com.example.viewmodel.DurakViewModel.OfflineDeckOption.DECK_36 to "36",
                                 com.example.viewmodel.DurakViewModel.OfflineDeckOption.DECK_52 to "52",
@@ -1601,7 +1612,7 @@ fun MultiplayerHubScreen(viewModel: DurakViewModel) {
                                         .weight(1f)
                                         .clip(RoundedCornerShape(10.dp))
                                         .background(if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant)
-                                        .clickable(enabled = networkState == MultiplayerManager.State.IDLE) { viewModel.setMpLobbyPlayersCount(count) }
+                                        .clickable(enabled = lobby?.inMatch != true) { viewModel.setMpLobbyPlayersCount(count) }
                                         .padding(vertical = 9.dp),
                                     contentAlignment = Alignment.Center
                                 ) {
@@ -1655,15 +1666,10 @@ fun MultiplayerHubScreen(viewModel: DurakViewModel) {
                             if (lobby != null) {
                                 Spacer(modifier = Modifier.height(16.dp))
                                 MultiplayerLobbyCard(
+                                    viewModel = viewModel,
                                     lobby = lobby!!,
                                     isHost = true,
                                     appLanguage = appLanguage,
-                                    chatDraft = chatDraft,
-                                    onChatDraftChange = { chatDraft = it },
-                                    onSendChat = {
-                                        viewModel.sendLobbyChat(chatDraft)
-                                        chatDraft = ""
-                                    },
                                     onStartMatch = { viewModel.startHostedMatch() }
                                 )
                             }
@@ -1700,15 +1706,10 @@ fun MultiplayerHubScreen(viewModel: DurakViewModel) {
                 Column(modifier = Modifier.fillMaxWidth()) {
                     if (lobby != null) {
                         MultiplayerLobbyCard(
+                            viewModel = viewModel,
                             lobby = lobby!!,
                             isHost = false,
                             appLanguage = appLanguage,
-                            chatDraft = chatDraft,
-                            onChatDraftChange = { chatDraft = it },
-                            onSendChat = {
-                                viewModel.sendLobbyChat(chatDraft)
-                                chatDraft = ""
-                            },
                             onStartMatch = null
                         )
                         Spacer(modifier = Modifier.height(16.dp))
@@ -1845,6 +1846,7 @@ fun MultiplayerHubScreen(viewModel: DurakViewModel) {
             }
         }
 
+        RoomConnectionStatus(viewModel, lobby, appLanguage)
         // Network Status Alerts
         Box(
             modifier = Modifier
@@ -1856,6 +1858,7 @@ fun MultiplayerHubScreen(viewModel: DurakViewModel) {
                 MultiplayerManager.State.CONNECTING -> viewModel.getString("CONNECTING")
                 MultiplayerManager.State.CONNECTED -> "CONNECTED!"
                 MultiplayerManager.State.DISCONNECTED -> viewModel.getString("DISCONNECTED")
+                MultiplayerManager.State.RECONNECTING -> mpText(appLanguage, "Восстанавливаем подключение…", "Reconnecting…", "Riconnessione…", "Відновлюємо підключення…")
                 else -> ""
             }
 
@@ -1874,12 +1877,10 @@ fun MultiplayerHubScreen(viewModel: DurakViewModel) {
 
 @Composable
 private fun MultiplayerLobbyCard(
+    viewModel: DurakViewModel,
     lobby: com.example.network.MultiplayerLobby.Snapshot,
     isHost: Boolean,
     appLanguage: AppLanguage,
-    chatDraft: String,
-    onChatDraftChange: (String) -> Unit,
-    onSendChat: () -> Unit,
     onStartMatch: (() -> Unit)?
 ) {
     val russian = appLanguage == AppLanguage.RU
@@ -1895,17 +1896,6 @@ private fun MultiplayerLobbyCard(
                 fontSize = 14.sp
             )
             Spacer(modifier = Modifier.height(8.dp))
-            lobby.players.forEach { player ->
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
-                    Icon(Icons.Default.Person, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = if (player.isHost) "${player.nickname} ${if (russian) "(хост)" else "(host)"}" else player.nickname,
-                        fontSize = 13.sp,
-                        fontWeight = if (player.isHost) FontWeight.Bold else FontWeight.Normal
-                    )
-                }
-            }
             repeat((lobby.capacity - lobby.players.size).coerceAtLeast(0)) {
                 Text(
                     text = if (russian) "○ Свободный слот" else "○ Open slot",
@@ -1915,42 +1905,37 @@ private fun MultiplayerLobbyCard(
                 )
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
-            if (lobby.messages.isEmpty()) {
-                Text(
-                    text = if (russian) "Чат комнаты пуст" else "Room chat is empty",
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f)
-                )
-            } else {
-                lobby.messages.takeLast(3).forEach { message ->
-                    Text(
-                        text = "${message.senderName}: ${message.text}",
-                        fontSize = 12.sp,
-                        maxLines = 1,
-                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-                    )
+            Text(
+                mpText(appLanguage, "Колода", "Deck", "Mazzo", "Колода") + ": " + (lobby.settings.customDeckIds?.size ?: lobby.settings.deckSize) +
+                " · " + if (lobby.settings.transfer) mpText(appLanguage, "Переводной", "Transfer", "Trasferimento", "Перевідний") else mpText(appLanguage, "Классический", "Classic", "Classico", "Класичний"),
+                fontSize = 12.sp
+            )
+            lobby.players.forEach { player ->
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Text(player.nickname + (if (player.isHost) mpText(appLanguage, " (хост)", " (host)", " (host)", " (хост)") else "") + " · " + when {
+                        !player.connected -> mpText(appLanguage, "нет связи", "disconnected", "disconnesso", "немає зв’язку")
+                        player.ready -> mpText(appLanguage, "готов ✓", "ready ✓", "pronto ✓", "готовий ✓")
+                        else -> mpText(appLanguage, "не готов", "not ready", "non pronto", "не готовий")
+                    }, modifier = Modifier.weight(1f), fontSize = 12.sp)
+                    if (isHost && !player.isHost && !lobby.inMatch) TextButton(onClick = { viewModel.removeRoomPlayer(player.id) }, modifier = Modifier.testTag("remove_${player.id}")) { Text("×") }
                 }
             }
-            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                OutlinedTextField(
-                    value = chatDraft,
-                    onValueChange = { onChatDraftChange(it.take(160)) },
-                    modifier = Modifier.weight(1f),
-                    singleLine = true,
-                    maxLines = 1,
-                    placeholder = { Text(if (russian) "Сообщение" else "Message", fontSize = 12.sp) },
-                    shape = RoundedCornerShape(12.dp)
-                )
-                IconButton(onClick = { if (chatDraft.isNotBlank()) onSendChat() }) {
-                    Icon(Icons.Default.Send, contentDescription = if (russian) "Отправить" else "Send", tint = MaterialTheme.colorScheme.primary)
+            if (!isHost && !lobby.inMatch) {
+                val id by viewModel.localNetworkPlayerId.collectAsStateWithLifecycle()
+                val ready = lobby.players.firstOrNull { it.id == id }?.ready == true
+                Button(onClick = { viewModel.setMultiplayerReady(!ready) }, modifier = Modifier.fillMaxWidth().testTag("ready_button")) {
+                    Text(if (ready) mpText(appLanguage, "Не готов", "Not ready", "Non pronto", "Не готовий") else mpText(appLanguage, "Готов", "Ready", "Pronto", "Готовий"))
                 }
             }
+            RoomChat(viewModel, lobby, appLanguage)
+            val settingsError by viewModel.lobbySettingsError.collectAsStateWithLifecycle()
+            if ((settingsError || !lobby.settings.validFor(lobby.players.size)) && isHost) Text(mpText(appLanguage, "Недостаточно карт или мест для участников", "Not enough cards or seats for the players", "Carte o posti insufficienti", "Недостатньо карт або місць для учасників"), color = MaterialTheme.colorScheme.error)
+            if (!lobby.canStart) Text(mpText(appLanguage, "Ожидаем готовности всех участников", "Waiting for everyone to be ready", "In attesa che tutti siano pronti", "Чекаємо готовності всіх учасників"), fontSize = 12.sp)
             if (isHost && onStartMatch != null) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Button(
                     onClick = onStartMatch,
-                    enabled = lobby.players.size in 2..lobby.capacity,
+                    enabled = lobby.canStart && !settingsError,
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp)
                 ) {
@@ -2517,40 +2502,9 @@ fun GameTableScreen(viewModel: DurakViewModel) {
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 if (activeMode != GameMode.OFFLINE) {
-                    lobby?.messages?.lastOrNull()?.let { message ->
-                        Text(
-                            text = "${message.senderName}: ${message.text}",
-                            color = Color.White.copy(alpha = 0.82f),
-                            fontSize = 11.sp,
-                            maxLines = 1,
-                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                            modifier = Modifier.padding(bottom = 6.dp)
-                        )
-                    }
-                    val quickMessages = when (appLanguage) {
-                        AppLanguage.RU -> listOf("Привет! 👋", "Хороший ход 👍", "Спасибо!", "Удачи! 🍀")
-                        AppLanguage.UA -> listOf("Привіт! 👋", "Гарний хід 👍", "Дякую!", "Удачі! 🍀")
-                        AppLanguage.IT -> listOf("Ciao! 👋", "Bella mossa 👍", "Grazie!", "Buona fortuna! 🍀")
-                        else -> listOf("Hello! 👋", "Nice move 👍", "Thanks!", "Good luck! 🍀")
-                    }
-                    LazyRow(
-                        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
-                        horizontalArrangement = Arrangement.Center,
-                        contentPadding = PaddingValues(horizontal = 4.dp)
-                    ) {
-                        items(quickMessages) { message ->
-                            Box(
-                                modifier = Modifier
-                                    .padding(horizontal = 3.dp)
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(Color.White.copy(alpha = 0.08f))
-                                    .clickable { viewModel.sendLobbyChat(message) }
-                                    .padding(horizontal = 10.dp, vertical = 6.dp)
-                            ) {
-                                Text(message, color = Color.White, fontSize = 10.sp, maxLines = 1)
-                            }
-                        }
-                    }
+                    RoomConnectionStatus(viewModel, lobby, appLanguage)
+                    BitoProgress(snapshot, viewModel.playerNickname.value, appLanguage)
+                    RoomChat(viewModel, lobby, appLanguage)
                 }
                 // Turn Status Text inside Footer
                 Text(
@@ -2962,6 +2916,11 @@ fun GameTableScreen(viewModel: DurakViewModel) {
                                 }
                             }
 
+                            if (activeMode == GameMode.ONLINE_HOST && snapshot.matchStatus != MatchStatus.PLAYER_DISCONNECTED) {
+                                Button(onClick = { viewModel.returnRoomToLobby() }, modifier = Modifier.weight(1f).testTag("return_room")) {
+                                    Text(mpText(appLanguage, "В лобби", "To lobby", "Alla stanza", "До лобі"))
+                                }
+                            }
                             Button(
                                 onClick = { viewModel.navigateTo(DurakViewModel.Screen.MAIN_MENU) },
                                 colors = ButtonDefaults.buttonColors(
@@ -3361,7 +3320,7 @@ fun CustomDeckSelectionScreen(viewModel: DurakViewModel) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(
-                onClick = { viewModel.navigateTo(DurakViewModel.Screen.OFFLINE_SETUP) },
+                onClick = { viewModel.closeCustomDeck() },
                 modifier = Modifier.background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
             ) {
                 Icon(
@@ -3594,7 +3553,7 @@ fun CustomDeckSelectionScreen(viewModel: DurakViewModel) {
             }
 
             Button(
-                onClick = { viewModel.navigateTo(DurakViewModel.Screen.OFFLINE_SETUP) },
+                onClick = { viewModel.closeCustomDeck() },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp)

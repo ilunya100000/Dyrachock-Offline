@@ -1,6 +1,8 @@
 package com.example.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -17,17 +19,76 @@ import com.example.model.GameStateSnapshot
 import com.example.model.RemotePlayerSnapshot
 import com.example.viewmodel.AppLanguage
 
+fun roadmapAnnouncement(language: AppLanguage): Pair<String, String> = when (language) {
+    AppLanguage.RU -> "📊 Анонс: Версия 0.4\nСтатистическое обновление" to """
+        Планируем в Statistics Update:
+
+        • Обновлённая статистика: более подробные показатели побед и поражений, результаты по режимам и отдельный учёт одиночных и сетевых партий.
+
+        • Динамика твоей игры: наглядные графики и сравнение показателей за разные периоды, чтобы видеть свой прогресс.
+
+        • Удобные логи: читаемая история ходов, поиск и фильтры в архиве, быстрый доступ к нужной партии.
+
+        • Разбор игр: просмотр ключевых ходов и поворотных моментов партии, чтобы легче замечать ошибки и удачные решения.
+
+        • Улучшения интерфейса: более удобные экраны статистики, архива и просмотра партии, понятная навигация и представление данных.
+
+        • Полноценные порты для Windows и Linux: настольные версии с интерфейсом и управлением, адаптированными под мышь, клавиатуру и большие экраны.
+    """.trimIndent()
+    AppLanguage.EN -> "📊 Announcement: Version 0.4\nStatistics Update" to """
+        Planned for Statistics Update:
+
+        • Updated statistics: more detailed win and loss figures, results by game mode, and separate records for solo and multiplayer matches.
+
+        • Your performance over time: clear charts and comparisons across different periods to help you track your progress.
+
+        • Better logs: readable move histories, archive search and filters, and quick access to the match you need.
+
+        • Game analysis: review key moves and turning points to better understand mistakes and good decisions.
+
+        • Interface improvements: more convenient statistics, archive and match review screens, clearer navigation and data presentation.
+
+        • Full Windows and Linux ports: desktop versions with interfaces and controls adapted for mouse, keyboard and larger screens.
+    """.trimIndent()
+    AppLanguage.IT -> "📊 Annuncio: Versione 0.4\nAggiornamento delle statistiche" to """
+        In programma per Statistics Update:
+
+        • Statistiche aggiornate: dati più dettagliati su vittorie e sconfitte, risultati per modalità e registri separati per partite in solitaria e multigiocatore.
+
+        • Andamento del tuo gioco: grafici chiari e confronti tra periodi diversi per seguire i tuoi progressi.
+
+        • Registri più comodi: cronologia delle mosse leggibile, ricerca e filtri nell’archivio, accesso rapido alla partita desiderata.
+
+        • Analisi delle partite: revisione delle mosse chiave e dei momenti decisivi per capire meglio errori e buone scelte.
+
+        • Miglioramenti dell’interfaccia: schermate più comode per statistiche, archivio e revisione delle partite, navigazione e presentazione dei dati più chiare.
+
+        • Versioni complete per Windows e Linux: edizioni desktop con interfaccia e comandi adattati a mouse, tastiera e schermi più grandi.
+    """.trimIndent()
+    AppLanguage.UA -> "📊 Анонс: Версія 0.4\nСтатистичне оновлення" to """
+        Плануємо у Statistics Update:
+
+        • Оновлена статистика: докладніші показники перемог і поразок, результати за режимами та окремий облік одиночних і мережевих партій.
+
+        • Динаміка твоєї гри: наочні графіки й порівняння показників за різні періоди, щоб бачити свій прогрес.
+
+        • Зручні логи: читабельна історія ходів, пошук і фільтри в архіві, швидкий доступ до потрібної партії.
+
+        • Розбір ігор: перегляд ключових ходів і поворотних моментів партії, щоб легше помічати помилки та вдалі рішення.
+
+        • Поліпшення інтерфейсу: зручніші екрани статистики, архіву й перегляду партії, зрозуміла навігація та подання даних.
+
+        • Повноцінні порти для Windows і Linux: настільні версії з інтерфейсом і керуванням, адаптованими для миші, клавіатури та великих екранів.
+    """.trimIndent()
+}
+
 @Composable
 fun RoadmapNotice(language: AppLanguage) {
-    Text(
-        text = when (language) {
-            AppLanguage.RU -> "Временно меняется"
-            AppLanguage.UA -> "Тимчасово змінюється"
-            AppLanguage.IT -> "In fase di aggiornamento"
-            AppLanguage.EN -> "Temporarily being updated"
-        },
-        modifier = Modifier.testTag("roadmap_notice")
-    )
+    val (title, description) = roadmapAnnouncement(language)
+    Column(Modifier.heightIn(max = 440.dp).verticalScroll(rememberScrollState()).testTag("roadmap_notice"), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text(title, fontWeight = FontWeight.Bold, fontSize = 18.sp, modifier = Modifier.testTag("roadmap_title"))
+        Text(description, modifier = Modifier.testTag("roadmap_description"))
+    }
 }
 
 @Composable
@@ -46,6 +107,8 @@ fun MultiplayerRoster(snapshot: GameStateSnapshot, localName: String, language: 
                     row.forEach { player ->
                         val local = player.id == snapshot.localPlayerId
                         val role = when {
+                            player.id in snapshot.withdrawnPlayerIds -> if (russian) "вышел" else "left"
+                            player.id in snapshot.passedPlayerIds -> "Бито ✓"
                             player.isDefender -> if (russian) "защита" else "defender"
                             player.isAttacker -> if (russian) "атака" else "attacker"
                             player.handSize == 0 && snapshot.deckSize == 0 -> if (russian) "без карт" else "no cards"
@@ -78,6 +141,7 @@ fun multiplayerTurnText(snapshot: GameStateSnapshot, language: AppLanguage): Str
     val russian = language == AppLanguage.RU
     val defenderName = snapshot.opponents.firstOrNull { it.id == snapshot.defenderPlayerId }?.name.orEmpty()
     return when {
+        snapshot.roomPaused -> mpText(language, "ПАУЗА · ВОССТАНОВЛЕНИЕ СВЯЗИ", "PAUSED · RECONNECTING", "PAUSA · RICONNESSIONE", "ПАУЗА · ВІДНОВЛЕННЯ ЗВ’ЯЗКУ")
         snapshot.isDefenderTaking && snapshot.defenderPlayerId == snapshot.localPlayerId ->
             if (russian) "ВЫ БЕРЁТЕ · ОЖИДАЙТЕ ЗАВЕРШЕНИЯ" else "YOU ARE TAKING · WAIT FOR ROUND END"
         snapshot.isDefenderTaking && !snapshot.canBito && !snapshot.isLocalTurn ->

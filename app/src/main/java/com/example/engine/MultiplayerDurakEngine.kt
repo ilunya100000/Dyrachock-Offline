@@ -28,7 +28,10 @@ class MultiplayerDurakEngine(private val random: SecureRandom = SecureRandom()) 
         val finished: Boolean,
         val transferMode: Boolean,
         val loserId: String?,
-        val attackPlayerIds: List<String> = players.filter { it.isAttacker }.map { it.id }
+        val attackPlayerIds: List<String> = players.filter { it.isAttacker }.map { it.id },
+        val passedPlayerIds: List<String> = emptyList(),
+        val roundAttackerIds: List<String> = emptyList(),
+        val withdrawnPlayerIds: List<String> = emptyList()
     )
 
     private val hands = linkedMapOf<String, MutableList<Card>>()
@@ -38,6 +41,7 @@ class MultiplayerDurakEngine(private val random: SecureRandom = SecureRandom()) 
     private val attackOwners = mutableListOf<String>()
     private val roundAttackers = linkedSetOf<String>()
     private val passedAttackers = mutableSetOf<String>()
+    private val withdrawn = mutableSetOf<String>()
     private var leadPassed = false
     private var attackerIndex = 0
     private var defenderIndex = 1
@@ -55,6 +59,7 @@ class MultiplayerDurakEngine(private val random: SecureRandom = SecureRandom()) 
         require(players.size in 2..6) { "Durak needs from two to six players" }
         require(players.map { it.id }.distinct().size == players.size) { "Player ids must be unique" }
         seats = players
+        withdrawn.clear()
         hands.clear()
         players.forEach { hands[it.id] = mutableListOf() }
         deck.clear()
@@ -87,7 +92,7 @@ class MultiplayerDurakEngine(private val random: SecureRandom = SecureRandom()) 
     }
 
     fun attack(playerId: String, card: Card): Boolean {
-        if (finished || playerId == defenderId || !isAttackTurn(playerId)) return false
+        if (finished || playerId in withdrawn || playerId == defenderId || !isAttackTurn(playerId)) return false
         val hand = hands[playerId] ?: return false
         if (!hand.contains(card) || table.size >= 6) return false
         if (table.isEmpty()) {
@@ -158,10 +163,15 @@ class MultiplayerDurakEngine(private val random: SecureRandom = SecureRandom()) 
         passedAttackers += playerId
         if (playerId == attackerId) leadPassed = true
         if (attackPlayerIds.isNotEmpty()) return true
+        closeRound()
+        return true
+    }
+
+    private fun closeRound() {
         val defenderWasTaking = taking
         val oldDefender = defenderIndex
         if (defenderWasTaking) {
-            val defenderHand = hands[defenderId] ?: return false
+            val defenderHand = hands.getValue(defenderId)
             table.forEach { pair -> defenderHand += pair.attackCard; pair.defenseCard?.let { defenderHand += it } }
         } else {
             discardSize += table.sumOf { if (it.defenseCard == null) 1 else 2 }
@@ -180,6 +190,32 @@ class MultiplayerDurakEngine(private val random: SecureRandom = SecureRandom()) 
         taking = false
         transferredThisRound = false
         evaluateFinished()
+    }
+
+    /** Explicit departure discards that hand; a temporary connection loss never calls this. */
+    fun forfeit(playerId: String): Boolean {
+        val index = seats.indexOfFirst { it.id == playerId }
+        if (finished || index < 0 || playerId in withdrawn) return false
+        withdrawn += playerId
+        discardSize += hands.getValue(playerId).size
+        hands.getValue(playerId).clear()
+        roundAttackers.remove(playerId); passedAttackers.remove(playerId)
+        if (index == defenderIndex) {
+            discardSize += table.sumOf { if (it.defenseCard == null) 1 else 2 }
+            table.clear(); attackOwners.clear(); roundAttackers.clear(); passedAttackers.clear()
+            leadPassed = false; taking = false; transferredThisRound = false
+            refillHands()
+            if (attackerId in withdrawn || hands[attackerId].isNullOrEmpty() && deck.isEmpty()) attackerIndex = nextActiveIndex(attackerIndex)
+            defenderIndex = nextActiveIndex(attackerIndex)
+        } else if (index == attackerIndex) {
+            attackerIndex = seats.indices.firstOrNull { it != defenderIndex && seats[it].id !in withdrawn && (hands[seats[it].id].orEmpty().isNotEmpty() || deck.isNotEmpty()) }
+                ?: defenderIndex
+            if (attackerIndex == defenderIndex) defenderIndex = nextActiveIndex(attackerIndex)
+            leadPassed = false; passedAttackers.clear()
+        } else if (table.isNotEmpty() && leadPassed && attackPlayerIds.isEmpty()) closeRound()
+        if (seats.count { it.id !in withdrawn } <= 1) {
+            finished = true; loserId = playerId
+        } else evaluateFinished()
         return true
     }
 
@@ -192,7 +228,8 @@ class MultiplayerDurakEngine(private val random: SecureRandom = SecureRandom()) 
             deckSize = deck.size, discardSize = discardSize,
             currentPlayerId = currentPlayerId, defenderId = defenderId,
             taking = taking, finished = finished, transferMode = transferMode, loserId = loserId,
-            attackPlayerIds = attackPlayerIds
+            attackPlayerIds = attackPlayerIds, passedPlayerIds = passedAttackers.toList(),
+            roundAttackerIds = roundAttackers.filter { it != defenderId && it !in withdrawn }, withdrawnPlayerIds = withdrawn.toList()
         )
     }
 
@@ -211,7 +248,7 @@ class MultiplayerDurakEngine(private val random: SecureRandom = SecureRandom()) 
         var index = from
         repeat(seats.size) {
             index = (index + 1) % seats.size
-            if (hands[seats[index].id]?.isNotEmpty() == true || deck.isNotEmpty()) return index
+            if (seats[index].id !in withdrawn && (hands[seats[index].id]?.isNotEmpty() == true || deck.isNotEmpty())) return index
         }
         return (from + 1) % seats.size
     }
@@ -225,7 +262,7 @@ class MultiplayerDurakEngine(private val random: SecureRandom = SecureRandom()) 
     private fun refillHands() {
         // Attackers draw clockwise first; the defender always draws last.
         val order = seats.indices.map { (attackerIndex + it) % seats.size }
-            .filter { it != defenderIndex } + defenderIndex
+            .filter { it != defenderIndex && seats[it].id !in withdrawn } + listOf(defenderIndex).filter { seats[it].id !in withdrawn }
         order.forEach { index ->
             val id = seats[index].id
             while (hands.getValue(id).size < 6 && deck.isNotEmpty()) drawOne(id)

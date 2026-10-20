@@ -58,6 +58,8 @@ class MultiplayerIntegrationTest {
                 val room = host.lobby.value!!
                 val ids = clients.map { it.localPlayerId.value!! }
                 assertEquals(count - 1, ids.distinct().size)
+                clients.forEach { it.setReady(true) }
+                await { host.lobby.value?.canStart == true }
                 assertTrue(host.lockLobbyForMatch())
                 val game = MultiplayerDurakEngine()
                 game.start(room.players.map { MultiplayerDurakEngine.Seat(it.id, it.nickname) })
@@ -81,7 +83,7 @@ class MultiplayerIntegrationTest {
                 assertEquals(ids.last(), withTimeout(10000) { incoming.await() }.senderId)
                 // A remote EOF must remain observable, rather than being overwritten by IDLE.
                 host.stopAll()
-                await { clients.all { it.connectionState.value == MultiplayerManager.State.DISCONNECTED } }
+                await { clients.all { it.connectionState.value in listOf(MultiplayerManager.State.RECONNECTING, MultiplayerManager.State.DISCONNECTED) } }
             } finally {
                 host.stopAll()
                 clients.forEach { it.stopAll() }

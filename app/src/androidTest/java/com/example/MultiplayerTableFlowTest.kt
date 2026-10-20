@@ -64,6 +64,8 @@ class MultiplayerTableFlowTest {
                     model.multiplayerLobby.value?.players?.any { it.id == client.localPlayerId.value && it.nickname == "Игрок ${index + 1}" } == true
                 }
             }
+            clients.forEach { it.setReady(true) }
+            compose.waitUntil(10000) { model.multiplayerLobby.value?.canStart == true }
             compose.runOnIdle { assertTrue(model.startHostedMatch()) }
             compose.waitUntil(10000) { states.size == 5 && model.gameState.value.opponents.size == 5 }
             compose.onNodeWithTag("seat_host").assertIsDisplayed()
@@ -125,6 +127,8 @@ class MultiplayerTableFlowTest {
                     model.multiplayerLobby.value?.players?.any { it.id == client.localPlayerId.value && it.nickname == "Player${index + 2}" } == true
                 }
             }
+            clients.forEach { it.setReady(true) }
+            compose.waitUntil(10000) { model.multiplayerLobby.value?.canStart == true }
             compose.runOnIdle { assertTrue(model.startHostedMatch()) }
             compose.waitUntil(10000) { states.size == 2 && model.gameState.value.opponents.size == 2 }
             val before = model.gameState.value

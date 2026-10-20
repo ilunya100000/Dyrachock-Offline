@@ -2,132 +2,95 @@ package com.example.network
 
 import java.security.SecureRandom
 
-/**
- * Host-authoritative lobby state for a local Wi-Fi match.  It deliberately has
- * no Android dependencies, so the room rules can be unit-tested separately
- * from sockets and Compose.
- */
-class MultiplayerLobby(
-    val roomCode: String = createRoomCode(),
-    val capacity: Int = MAX_PLAYERS
-) {
+/** Room rules are shared by the socket host and JVM regression tests. */
+class MultiplayerLobby(val roomCode: String = createRoomCode(), var capacity: Int = MAX_PLAYERS) {
     companion object {
         const val MIN_PLAYERS = 2
         const val MAX_PLAYERS = 6
-        private val alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
-
         fun createRoomCode(): String {
+            val alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
             val random = SecureRandom()
-            return buildString(6) {
-                repeat(6) { append(alphabet[random.nextInt(alphabet.length)]) }
-            }
+            return buildString { repeat(6) { append(alphabet[random.nextInt(alphabet.length)]) } }
         }
     }
-
-    data class Player(val id: String, val nickname: String, val isHost: Boolean = false)
+    data class Settings(val deckSize: Int = 36, val transfer: Boolean = false, val customDeckIds: Set<String>? = null) {
+        fun validFor(count: Int) = deckSize in listOf(36, 52) &&
+            (customDeckIds == null || (customDeckIds.size >= count * 6 && customDeckIds.all { it in com.example.model.Suit.values().flatMap { suit -> com.example.model.Rank.values().map { rank -> "${suit.name}_${rank.name}" } } }))
+    }
+    data class Player(val id: String, val nickname: String, val isHost: Boolean = false, val ready: Boolean = isHost, val connected: Boolean = true)
     data class ChatMessage(val senderId: String, val senderName: String, val text: String)
-    data class Snapshot(
-        val roomCode: String,
-        val capacity: Int,
-        val players: List<Player>,
-        val messages: List<ChatMessage>
-    ) {
-        val canStart: Boolean get() = players.size >= MIN_PLAYERS
+    data class Snapshot(val roomCode: String, val capacity: Int, val players: List<Player>, val messages: List<ChatMessage>,
+        val settings: Settings = Settings(), val inMatch: Boolean = false) {
+        val canStart get() = players.size in MIN_PLAYERS..capacity && players.all { it.connected && it.ready } && settings.validFor(players.size) && !inMatch
     }
-
-    private val mutablePlayers = mutableListOf<Player>()
-    private val mutableMessages = mutableListOf<ChatMessage>()
-
-    val players: List<Player> get() = mutablePlayers.toList()
-    val messages: List<ChatMessage> get() = mutableMessages.toList()
-    val canStart: Boolean get() = mutablePlayers.size >= MIN_PLAYERS
-
-    fun snapshot() = Snapshot(roomCode, capacity, players, messages)
-
+    private val members = mutableListOf<Player>()
+    private val chat = mutableListOf<ChatMessage>()
+    private val lastMessage = mutableMapOf<String, Long>()
+    var settings = Settings(); private set
+    var inMatch = false
+    val players get() = members.toList()
+    val messages get() = chat.toList()
+    val canStart get() = snapshot().canStart
+    fun snapshot() = Snapshot(roomCode, capacity, players, messages, settings, inMatch)
     fun addPlayer(id: String, nickname: String, isHost: Boolean = false): Boolean {
-        if (id.isBlank() || nickname.isBlank() || mutablePlayers.size >= capacity) return false
-        if (mutablePlayers.any { it.id == id }) return false
-        mutablePlayers += Player(id, nickname.take(24), isHost)
+        if (inMatch || id.isBlank() || nickname.isBlank() || members.size >= capacity || members.any { it.id == id }) return false
+        members += Player(id, nickname.trim().take(24), isHost)
         return true
     }
-
-    fun removePlayer(id: String): Boolean = mutablePlayers.removeAll { it.id == id }
-
-    fun renamePlayer(id: String, nickname: String): Boolean {
-        val index = mutablePlayers.indexOfFirst { it.id == id }
-        val normalized = nickname.trim().take(24)
-        if (index == -1 || normalized.isEmpty()) return false
-        val current = mutablePlayers[index]
-        mutablePlayers[index] = current.copy(nickname = normalized)
+    fun removePlayer(id: String) = members.removeAll { it.id == id }
+    private fun update(id: String, change: (Player) -> Player): Boolean {
+        val i = members.indexOfFirst { it.id == id }; if (i < 0) return false
+        members[i] = change(members[i]); return true
+    }
+    fun renamePlayer(id: String, nickname: String): Boolean = nickname.trim().isNotEmpty() && update(id) { it.copy(nickname = nickname.trim().take(24)) }
+    fun setConnected(id: String, connected: Boolean) = update(id) { it.copy(connected = connected, ready = if (connected) it.ready else it.isHost) }
+    fun setReady(id: String, ready: Boolean): Boolean = !inMatch && update(id) { it.copy(ready = if (it.isHost) true else ready) }
+    fun configure(capacity: Int, settings: Settings): Boolean {
+        if (inMatch || capacity !in 2..6 || capacity < members.size || !settings.validFor(members.size.coerceAtLeast(2))) return false
+        if (this.capacity == capacity && this.settings == settings) return true
+        this.capacity = capacity; this.settings = settings
+        members.replaceAll { it.copy(ready = it.isHost) }
         return true
     }
-
-    fun postMessage(senderId: String, text: String): ChatMessage? {
-        val sender = mutablePlayers.firstOrNull { it.id == senderId } ?: return null
+    fun returnToLobby() { inMatch = false; members.replaceAll { it.copy(ready = it.isHost) } }
+    fun postMessage(senderId: String, text: String, now: Long = System.nanoTime() / 1_000_000): ChatMessage? {
+        val sender = members.firstOrNull { it.id == senderId && it.connected } ?: return null
         val normalized = text.trim().take(160)
-        if (normalized.isEmpty()) return null
-        return ChatMessage(sender.id, sender.nickname, normalized).also { message ->
-            mutableMessages += message
-            if (mutableMessages.size > 50) mutableMessages.removeAt(0)
-        }
+        if (normalized.isEmpty() || now - (lastMessage[senderId] ?: (now - 1000)) < 1000) return null
+        lastMessage[senderId] = now
+        return ChatMessage(sender.id, sender.nickname, normalized).also { chat += it; if (chat.size > 50) chat.removeAt(0) }
     }
 }
 
-/**
- * A tiny line-oriented codec for lobby-only messages.  The match protocol is
- * intentionally kept separate so chat and member updates cannot be confused
- * with a game action.
- */
 object LobbyWireProtocol {
-    private const val PREFIX_JOIN = "LOBBY_JOIN:"
-    private const val PREFIX_CHAT = "LOBBY_CHAT:"
-    private const val PREFIX_STATE = "LOBBY_STATE:"
-    private const val FIELD = ","
-    private const val ITEM = ";"
-
-    fun join(nickname: String) = PREFIX_JOIN + encode(nickname.trim().take(24))
-    fun chat(text: String) = PREFIX_CHAT + encode(text.trim().take(160))
+    private fun enc(s: String) = java.net.URLEncoder.encode(s, "UTF-8")
+    private fun dec(s: String) = java.net.URLDecoder.decode(s, "UTF-8")
+    fun join(nickname: String) = "LOBBY_JOIN:" + enc(nickname.trim().take(24))
+    fun sessionJoin(nickname: String, token: String) = "SESSION_JOIN:" + enc(nickname.take(24)) + "|" + enc(token)
+    fun parseSessionJoin(line: String): Pair<String, String>? = runCatching {
+        require(line.startsWith("SESSION_JOIN:")); val f = line.removePrefix("SESSION_JOIN:").split("|"); require(f.size == 2)
+        dec(f[0]) to dec(f[1])
+    }.getOrNull()
+    fun ready(value: Boolean) = "LOBBY_READY:$value"
+    fun chat(text: String) = "LOBBY_CHAT:" + enc(text.trim().take(160))
     fun isLobbyMessage(message: String) = message.startsWith("LOBBY_")
-    fun decodeJoin(message: String): String? = decodePrefixed(message, PREFIX_JOIN)
-    fun decodeChat(message: String): String? = decodePrefixed(message, PREFIX_CHAT)
-
-    fun state(snapshot: MultiplayerLobby.Snapshot): String {
-        val players = snapshot.players.joinToString(ITEM) { player ->
-            listOf(encode(player.id), encode(player.nickname), if (player.isHost) "1" else "0").joinToString(FIELD)
-        }
-        val messages = snapshot.messages.joinToString(ITEM) { message ->
-            listOf(encode(message.senderId), encode(message.senderName), encode(message.text)).joinToString(FIELD)
-        }
-        return PREFIX_STATE + listOf(
-            encode(snapshot.roomCode),
-            snapshot.capacity.toString(),
-            encode(players),
-            encode(messages)
-        ).joinToString("|")
+    fun decodeJoin(message: String) = if (message.startsWith("LOBBY_JOIN:")) runCatching { dec(message.removePrefix("LOBBY_JOIN:")) }.getOrNull() else null
+    fun decodeChat(message: String) = if (message.startsWith("LOBBY_CHAT:")) runCatching { dec(message.removePrefix("LOBBY_CHAT:")) }.getOrNull() else null
+    fun state(s: MultiplayerLobby.Snapshot): String {
+        val players = s.players.joinToString(";") { listOf(enc(it.id), enc(it.nickname), it.isHost, it.ready, it.connected).joinToString(",") }
+        val chat = s.messages.joinToString(";") { listOf(enc(it.senderId), enc(it.senderName), enc(it.text)).joinToString(",") }
+        return "LOBBY_STATE:" + listOf(s.roomCode, s.capacity.toString(), players, chat, s.settings.deckSize.toString(), s.settings.transfer.toString(), s.settings.customDeckIds?.sorted()?.joinToString(",") ?: "-", s.inMatch.toString()).joinToString("|") { enc(it) }
     }
-
-    fun parseState(message: String): MultiplayerLobby.Snapshot? {
-        if (!message.startsWith(PREFIX_STATE)) return null
-        val values = message.removePrefix(PREFIX_STATE).split("|", limit = 4)
-        if (values.size != 4) return null
-        return runCatching {
-            val players = decode(values[2]).orEmpty().split(ITEM).filter { it.isNotBlank() }.map { row ->
-                val fields = row.split(FIELD)
-                require(fields.size == 3)
-                MultiplayerLobby.Player(decode(fields[0]).orEmpty(), decode(fields[1]).orEmpty(), fields[2] == "1")
-            }
-            val messages = decode(values[3]).orEmpty().split(ITEM).filter { it.isNotBlank() }.map { row ->
-                val fields = row.split(FIELD)
-                require(fields.size == 3)
-                MultiplayerLobby.ChatMessage(decode(fields[0]).orEmpty(), decode(fields[1]).orEmpty(), decode(fields[2]).orEmpty())
-            }
-            MultiplayerLobby.Snapshot(decode(values[0]).orEmpty(), values[1].toInt(), players, messages)
-        }.getOrNull()
-    }
-
-    private fun decodePrefixed(message: String, prefix: String): String? =
-        if (message.startsWith(prefix)) decode(message.removePrefix(prefix)) else null
-
-    private fun encode(value: String) = java.net.URLEncoder.encode(value, "UTF-8")
-    private fun decode(value: String) = runCatching { java.net.URLDecoder.decode(value, "UTF-8") }.getOrNull()
+    fun parseState(message: String): MultiplayerLobby.Snapshot? = runCatching {
+        require(message.startsWith("LOBBY_STATE:")); val f = message.removePrefix("LOBBY_STATE:").split("|").map(::dec); require(f.size == 8)
+        val players = f[2].split(";").filter { it.isNotBlank() }.map { row ->
+            val v = row.split(","); require(v.size == 5)
+            MultiplayerLobby.Player(dec(v[0]), dec(v[1]), v[2].toBooleanStrict(), v[3].toBooleanStrict(), v[4].toBooleanStrict())
+        }
+        val chat = f[3].split(";").filter { it.isNotBlank() }.map { row ->
+            val v = row.split(","); require(v.size == 3); MultiplayerLobby.ChatMessage(dec(v[0]), dec(v[1]), dec(v[2]))
+        }
+        MultiplayerLobby.Snapshot(f[0], f[1].toInt(), players, chat,
+            MultiplayerLobby.Settings(f[4].toInt(), f[5].toBooleanStrict(), if (f[6] == "-") null else f[6].split(",").toSet()), f[7].toBooleanStrict())
+    }.getOrNull()
 }

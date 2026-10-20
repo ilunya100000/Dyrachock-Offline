@@ -94,5 +94,9 @@ data class GameStateSnapshot(
     val localPlayerId: String = "player",
     val currentPlayerId: String = "",
     val defenderPlayerId: String = "",
-    val opponents: List<RemotePlayerSnapshot> = emptyList()
+    val opponents: List<RemotePlayerSnapshot> = emptyList(),
+    val passedPlayerIds: List<String> = emptyList(),
+    val roundAttackerIds: List<String> = emptyList(),
+    val withdrawnPlayerIds: List<String> = emptyList(),
+    val roomPaused: Boolean = false
 )

@@ -26,7 +26,7 @@ import java.io.File
 class MultiplayerUiTest {
     @get:Rule val compose = createComposeRule()
 
-    @Test fun allSixSeatsAreVisibleOnNarrowPhoneAndRoadmapShowsPlaceholder() {
+    @Test fun allSixSeatsAreVisibleOnNarrowPhoneAndRoadmapShowsAnnouncement() {
         val state = GameStateSnapshot(
             localPlayerId = "p0", defenderPlayerId = "p2", attackerPlayerId = "p1", currentPlayerId = "p2",
             localHand = listOf(Card(Suit.CLUBS, Rank.SIX)),
@@ -41,7 +41,7 @@ class MultiplayerUiTest {
             }
         }
         for (id in 0..5) compose.onNodeWithTag("seat_p$id").assertIsDisplayed()
-        compose.onNodeWithText("Временно меняется").assertIsDisplayed()
+        compose.onNodeWithTag("roadmap_title").assertTextContains("Статистическое обновление", substring = true)
         compose.onNodeWithText("Хост (вы)").assertIsDisplayed()
         val image = compose.onNodeWithTag("multiplayer_roster").captureToImage().asAndroidBitmap()
         val destination = File(InstrumentationRegistry.getInstrumentation().targetContext.getExternalFilesDir(null), "six-player-roster.png")

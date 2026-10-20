@@ -20,6 +20,8 @@ class MultiplayerLobbyTest {
         lobby.addPlayer("host", "Host", isHost = true)
         assertFalse(lobby.canStart)
         lobby.addPlayer("guest", "Guest")
+        assertFalse(lobby.canStart)
+        lobby.setReady("guest", true)
         assertTrue(lobby.canStart)
     }
 
